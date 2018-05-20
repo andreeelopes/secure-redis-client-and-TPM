@@ -41,6 +41,7 @@ public class SafeRedis {
 	public SafeRedis() {
 		
 		jedis = new Jedis("172.17.0.2", 6379,10000,false);
+		jedis.flushAll();
 		jedis.connect();
         String cipherA[]=XMLParser.getClientconfig();
         KeyManager.setCredencials("srsc", "srsc");
@@ -146,5 +147,27 @@ public class SafeRedis {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	public boolean remove(String key) {
+		//remove se tiver uma lista onde a key é Key:(valor)
+		//Quando inserir definir a key no field Key
+		byte[] valueByteArray=Utils.toByteArrayFromString(key);
+		Mac mac;
+		try {
+			mac = Mac.getInstance(config.getMacAlgorithm());
+			mac.init(macKey);
+			byte[] hmacValue =mac.doFinal(valueByteArray);
+			Set<String> keys=jedis.smembers("Key" + ":"+ new String(hmacValue, "ISO-8859-1"));
+			Iterator<String> it =keys.iterator();
+			if(!it.hasNext())
+				return false;
+			else {
+				jedis.del(it.next());
+				return true;
+			}
+		}catch (Exception e) {
+			e.getStackTrace();
+		}
+		return false;
 	}
 }
