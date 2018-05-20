@@ -2,6 +2,7 @@ package client;
 
 
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
@@ -27,7 +28,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import redis.clients.jedis.Jedis;
 
-public class Client {
+public class SafeRedis {
 	private Jedis jedis ;
 	private CipherConfig config;
 	private static KeyManager keyMan;
@@ -35,19 +36,19 @@ public class Client {
 	private Key macKey;
 	private static final String keyCipher="redis_cipherkey";
 	private static final String keymac="redis_mackey";
-	private byte[] iv;
+	
 	private IvParameterSpec ivParameterSpec;
-	public Client() {
-		jedis = new Jedis("172.17.0.2", 6379);
-        jedis.connect();
-        jedis.flushAll();
+	public SafeRedis() {
+		
+		jedis = new Jedis("172.17.0.2", 6379,10000,false);
+		jedis.connect();
         String cipherA[]=XMLParser.getClientconfig();
         KeyManager.setCredencials("srsc", "srsc");
         config= new CipherConfig(cipherA[0],cipherA[1],cipherA[2],cipherA[3]);
         String cipherAlg = config.getCipherSuite().split("/")[0];
         cipherKey= getKey(keyCipher,cipherAlg,cipherA[2], Integer.parseInt(cipherA[4]));
         macKey= getKey(keymac,cipherA[1],cipherA[3],Integer.parseInt(cipherA[5]));
-        iv=new byte[16];//TODO :tirar isto daqui
+        byte[] iv=new byte[16];//TODO :tirar isto daqui
         new SecureRandom().nextBytes(iv);
          ivParameterSpec = new IvParameterSpec(iv);
 	}
@@ -89,7 +90,7 @@ public class Client {
 				}
 				result.add(list);
 			}
-					//jedis.hgetAll(key);
+					
 		return result;
 		
 		} catch (Exception e) {
@@ -102,8 +103,6 @@ public class Client {
 		try {
 			//TODO: chave= h(valores de todos os fields)
 			byte[] valueByteArray=Utils.toByteArrayFromString(value);
-
-			
 			//cifrar o value
 			
 			
