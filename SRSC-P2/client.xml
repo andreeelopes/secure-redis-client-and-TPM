@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<config>
+	<cipherSuite >AES/CBC/PKCS5Padding</cipherSuite>
+	<cipherKeySize>256</cipherKeySize>
+	<macAlgorithm >HMacMD5</macAlgorithm>
+	<macProvider >BC</macProvider>
+	<macKeySize>64</macKeySize>
+	<cipherProvider >BC</cipherProvider>
+</config>
