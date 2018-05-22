@@ -13,16 +13,14 @@ import org.w3c.dom.NodeList;
 public class XMLParser {
 
 
-	public static String[] getClientconfig() {
+	public static CipherConfig getClientconfig() {
 
 		String cipherSuite = null;
 		String macAlgorithm = null;
 		String cipherProvider = null;
 		String macProvider = null;
-		String macKHashAlgorithm = null;
-		String pwdHashAlgorithm = null;
-		String cipherKeySize= null;
-		String macKeySize= null;
+		int cipherKeySize = 0;
+		int macKeySize = 0;
 		try {
 			File fXmlFile = new File("client.xml");
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -37,14 +35,15 @@ public class XMLParser {
 			macAlgorithm = e.getElementsByTagName("macAlgorithm").item(0).getTextContent();
 			macProvider = e.getElementsByTagName("macProvider").item(0).getTextContent();
 			cipherProvider = e.getElementsByTagName("cipherProvider").item(0).getTextContent();
-			cipherKeySize = e.getElementsByTagName("cipherKeySize").item(0).getTextContent();
-			macKeySize =e.getElementsByTagName("macKeySize").item(0).getTextContent();
-			
+			cipherKeySize = Integer.parseInt(e.getElementsByTagName("cipherKeySize").item(0).getTextContent());
+			macKeySize = Integer.parseInt(e.getElementsByTagName("macKeySize").item(0).getTextContent());
+
 		} catch (Exception e) {
 			e.printStackTrace();
 
 		}
 
-		return new String[] {cipherSuite, macAlgorithm, cipherProvider, macProvider,cipherKeySize,macKeySize};
+		return new CipherConfig(macAlgorithm, cipherSuite, macProvider,
+				cipherProvider, cipherKeySize, macKeySize);
 	}
 }

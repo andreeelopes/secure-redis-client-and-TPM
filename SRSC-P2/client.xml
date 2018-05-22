@@ -3,7 +3,7 @@
 	<cipherSuite >AES/CBC/PKCS5Padding</cipherSuite>
 	<cipherKeySize>256</cipherKeySize>
 	<macAlgorithm >HMacMD5</macAlgorithm>
-	<macProvider >BC</macProvider>
+	<macProvider >SunJCE</macProvider>
 	<macKeySize>64</macKeySize>
-	<cipherProvider >BC</cipherProvider>
+	<cipherProvider >SunJCE</cipherProvider>
 </config>

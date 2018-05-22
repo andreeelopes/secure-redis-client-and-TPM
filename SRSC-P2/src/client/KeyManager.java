@@ -28,7 +28,7 @@ public class KeyManager {
 		keyMasterPwd = keyMasterPassword;
 	}
 
-	private static KeyStore createKeyStore(String fileName, String pw){
+	private static KeyStore createKeyStore(String fileName, String pw) {
 		File file = new File(fileName);
 		KeyStore keyStore = null;
 
@@ -67,7 +67,7 @@ public class KeyManager {
 			keyGen = KeyGenerator.getInstance(algorithm, provider);
 			keyGen.init(keySize);
 			secretKey = keyGen.generateKey();
-			
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -88,11 +88,11 @@ public class KeyManager {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param keyName
 	 * @return returns null if key entry doesn't exists
 	 */
-	public static Key getKey(String keyName){ 
+	public static Key getKey(String keyName) {
 
 		PasswordProtection pwdProtection = new PasswordProtection(keyMasterPwd.toCharArray());
 		KeyStore.Entry entry = null;
@@ -102,8 +102,8 @@ public class KeyManager {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
-		if(entry != null)
+
+		if (entry != null)
 			key = ((KeyStore.SecretKeyEntry) entry).getSecretKey();
 
 		return key;

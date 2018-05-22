@@ -10,10 +10,10 @@ public class GetSetBenchmark {
     private static final int TOTAL_OPERATIONS = 100;
 
     public static void main(String[] args) throws UnknownHostException, IOException {
-	//Jedis jedis = new Jedis("rediss://localhost", 6379);
-    	Jedis jedis = new Jedis("172.17.0.2", 6379);
+        //Jedis jedis = new Jedis("rediss://localhost", 6379);
+        Jedis jedis = new Jedis("172.17.0.2", 6379);
 
-       //jedis.connect();
+        //jedis.connect();
         jedis.flushAll();
 
         long begin = Calendar.getInstance().getTimeInMillis();
