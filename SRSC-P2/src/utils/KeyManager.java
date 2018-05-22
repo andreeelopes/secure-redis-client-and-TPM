@@ -1,4 +1,4 @@
-package client;
+package utils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -15,20 +15,7 @@ import javax.crypto.spec.*;
 public class KeyManager {
 
 
-	private final static String keyStoreFile = "mykeystore.jceks";//path to key store
-	private static KeyStore keyStore;
-	private static String keyStorePwd;
-	private static String keyMasterPwd; //the 'master' password for all key entries (just to ease development)
-
-
-	public static void setCredencials(String keyStorePwd, String keyMasterPassword) {
-
-		KeyManager.keyStore = createKeyStore(keyStoreFile, keyStorePwd);
-		KeyManager.keyStorePwd = keyStorePwd;
-		keyMasterPwd = keyMasterPassword;
-	}
-
-	private static KeyStore createKeyStore(String fileName, String pw) {
+	public static KeyStore getOrCreateKeyStore(String fileName, String pw) {
 		File file = new File(fileName);
 		KeyStore keyStore = null;
 
@@ -62,8 +49,6 @@ public class KeyManager {
 		SecretKey secretKey = null;
 		KeyGenerator keyGen = null;
 		try {
-			System.out.println(algorithm);
-			System.out.println(provider);
 			keyGen = KeyGenerator.getInstance(algorithm, provider);
 			keyGen.init(keySize);
 			secretKey = keyGen.generateKey();
@@ -74,12 +59,15 @@ public class KeyManager {
 
 		return secretKey;
 	}
+	
+	
 
-	public static void storeKey(SecretKey key, String entryName) {
+	public static void storeKey(SecretKey key, String entryName, String keyMasterPwd, String keyStoreFile, String keyStorePwd) {
 
 		KeyStore.SecretKeyEntry keyStoreEntry = new KeyStore.SecretKeyEntry(key);
 		PasswordProtection keyPassword = new PasswordProtection(keyMasterPwd.toCharArray());
 		try {
+			KeyStore keyStore = getOrCreateKeyStore(keyStoreFile, keyStorePwd);
 			keyStore.setEntry(entryName, keyStoreEntry, keyPassword);
 			keyStore.store(new FileOutputStream(keyStoreFile), keyStorePwd.toCharArray());
 		} catch (Exception e) {
@@ -87,18 +75,14 @@ public class KeyManager {
 		}
 	}
 
-	/**
-	 *
-	 * @param keyName
-	 * @return returns null if key entry doesn't exists
-	 */
-	public static Key getKey(String keyName) {
+
+	public static Key getKey(String keyName, String keyMasterPwd, String keyStoreFile, String keyStorePwd) {
 
 		PasswordProtection pwdProtection = new PasswordProtection(keyMasterPwd.toCharArray());
 		KeyStore.Entry entry = null;
 		Key key = null;
 		try {
-			entry = keyStore.getEntry(keyName, pwdProtection);
+			entry = getOrCreateKeyStore(keyStoreFile, keyStorePwd).getEntry(keyName, pwdProtection);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -108,6 +92,20 @@ public class KeyManager {
 
 		return key;
 	}
+	
 
+	public static Key getOrCreateKey(String keyName, String algorithm, String provider, 
+			int keySize, String keyMasterPwd, String keyStoreFile, String keyStorePwd) {
+
+		Key k = null;
+		try {
+			if ((k = KeyManager.getKey(keyName, keyMasterPwd, keyStoreFile, keyStorePwd)) == null) {
+				k = KeyManager.generateKey(algorithm, provider, keySize);
+				KeyManager.storeKey((SecretKey) k, keyName, keyMasterPwd, keyStoreFile, keyStorePwd);
+			}
+		} catch (Exception e) {
+		}
+		return k;
+	}
 
 }

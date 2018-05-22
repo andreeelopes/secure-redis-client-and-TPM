@@ -1,4 +1,4 @@
-package client;
+package redis.client;
 
 
 import java.io.UnsupportedEncodingException;
@@ -24,47 +24,38 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 
 import redis.clients.jedis.Jedis;
+import utils.CipherConfig;
+import utils.KeyManager;
+import utils.Pair;
+import utils.Utils;
+import utils.XMLParser;
 
 public class SafeRedis {
 	private Jedis jedis ;
 	private CipherConfig config;
-	private static KeyManager keyMan;
 	private Key cipherKey;
 	private Key macKey;
-	private static final String keyCipher = "redis_cipherkey";
-	private static final String keymac = "redis_mackey";
+	private static final String keyCipherName = "redis_cipherkey";
+	private static final String keyMacName = "redis_mackey";
 
 	private IvParameterSpec ivParameterSpec;
+	
 	public SafeRedis() {
 
 		jedis = new Jedis("172.17.0.2", 6379, 10000, false);
 		jedis.flushAll();
 		jedis.connect();
 		config = XMLParser.getClientconfig();
-		KeyManager.setCredencials("srsc", "srsc");
-		cipherKey = getKey(keyCipher, config.getCipherAlg(), config.getCipherProvider(), 
-				config.getCipherKeySize());
-		macKey = getKey(keymac, config.getMacAlgorithm(), config.getCipherProvider(), 
-				config.getMacKeySize());
-		
+		cipherKey = KeyManager.getOrCreateKey(keyCipherName, config.getCipherAlg(), config.getCipherProvider(), 
+				config.getCipherKeySize(), "srsc", "mykeystore.jceks", "srsc");
+		macKey = KeyManager.getOrCreateKey(keyMacName, config.getMacAlgorithm(), config.getCipherProvider(), 
+				config.getMacKeySize(), "srsc", "mykeystore.jceks", "srsc");
+
 		byte[] iv = new byte[16]; //TODO :tirar isto daqui
 		new SecureRandom().nextBytes(iv);
 		ivParameterSpec = new IvParameterSpec(iv);
-	}
-
-
-	private static Key getKey(String entryName, String algorithm, String provider, int keySize) {
-
-		Key k = null;
-		try {
-			if ((k = KeyManager.getKey(entryName)) == null) {
-				k = KeyManager.generateKey(algorithm, provider, keySize);
-				KeyManager.storeKey((SecretKey) k, entryName);
-			}
-		} catch (Exception e) {
-		}
-		return k;
-	}
+	}	
+	
 	public List<List<Pair>> get(String field, String value) {
 		byte[] valueByteArray = Utils.toByteArrayFromString(value);
 		Mac mac;
@@ -92,7 +83,6 @@ public class SafeRedis {
 			return result;
 
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return null;
@@ -101,19 +91,16 @@ public class SafeRedis {
 		try {
 			//TODO: chave= h(valores de todos os fields)
 			byte[] valueByteArray = Utils.toByteArrayFromString(value);
-			//cifrar o value
-
-
-			Cipher cipher = Cipher.getInstance(config.getCipherSuite(), config.getCipherProvider());
+			
+			Cipher cipher = Cipher.getInstance(config.getCipherSuite(), config.getCipherProvider()); //cipher value
 			cipher.init(cipher.ENCRYPT_MODE, cipherKey, ivParameterSpec);
 			byte[] cipherValue = cipher.doFinal(valueByteArray);
 
 			String cipherStringValue = new String(cipherValue, "ISO-8859-1");
+			System.out.println(cipherStringValue);
 			//	byte[] encoded = cipherStringValue.getBytes("ISO-8859-1");
 
 			jedis.hset(key, field, cipherStringValue);
-
-
 
 			//criar hash para a indexação chave ex: marca:adidas, key
 			//se pesquisarmos por marca:adidas vai resultar de uma lista com todas
@@ -125,23 +112,7 @@ public class SafeRedis {
 			jedis.sadd(field + ":" + new String(hmacValue, "ISO-8859-1"), key);
 
 
-		} catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IllegalBlockSizeException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (BadPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidAlgorithmParameterException e) {
-			// TODO Auto-generated catch block
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -163,7 +134,7 @@ public class SafeRedis {
 				return true;
 			}
 		} catch (Exception e) {
-			e.getStackTrace();
+			e.printStackTrace();
 		}
 		return false;
 	}

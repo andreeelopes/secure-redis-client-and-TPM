@@ -3,8 +3,8 @@ package main.java;
 import java.util.Iterator;
 import java.util.List;
 
-import client.Pair;
-import client.SafeRedis;
+import redis.client.SafeRedis;
+import utils.Pair;
 
 public class Main {
 

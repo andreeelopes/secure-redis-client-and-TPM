@@ -1,4 +1,4 @@
-package client;
+package utils;
 
 import java.io.File;
 
@@ -22,7 +22,7 @@ public class XMLParser {
 		int cipherKeySize = 0;
 		int macKeySize = 0;
 		try {
-			File fXmlFile = new File("client.xml");
+			File fXmlFile = new File("redisClientConfig.xml");
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 			Document doc = dBuilder.parse(fXmlFile);

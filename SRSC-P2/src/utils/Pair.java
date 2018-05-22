@@ -1,4 +1,4 @@
-package client;
+package utils;
 
 public class Pair {
 	private String key;

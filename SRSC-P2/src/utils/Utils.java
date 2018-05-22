@@ -1,4 +1,4 @@
-package client;
+package utils;
 
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
