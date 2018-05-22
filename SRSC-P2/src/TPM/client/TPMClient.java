@@ -14,41 +14,62 @@ import javax.net.ssl.SSLSocketFactory;
 
 public class TPMClient {
 
-	public static void main(String[] args) {
+	private static String oldSnapshotGOSTPM = "";
+	private static String oldSnapshotVMSTPM = "";
 
-		BufferedReader in = new BufferedReader(
-				new InputStreamReader(System.in));
-		PrintStream out = System.out;
+	public static boolean atest(String ipGOSTPM, int portGOSTPM, String ipVMSTPM, int portVMSTPM) {
 
-		SSLSocketFactory f = 
-				(SSLSocketFactory) SSLSocketFactory.getDefault();
+		String snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM);
+		//String snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM);
+
+		System.out.println("\n\n\n\n\nxxxxxxxx" + snapshotGOSTPM) ;
+		
+		return atestGOSTPM(snapshotGOSTPM); //&& atestVMSTPM(snapshotVMSTPM);
+	}
+
+	private static boolean atestVMSTPM(String snapshotVMSTPM) {
+		if(oldSnapshotVMSTPM.equals("") )
+			oldSnapshotVMSTPM = snapshotVMSTPM;
+
+		return oldSnapshotVMSTPM.equals(snapshotVMSTPM);
+	}
+
+	private static boolean atestGOSTPM(String snapshotGOSTPM) {
+		if(oldSnapshotGOSTPM.equals("") )
+			oldSnapshotGOSTPM = snapshotGOSTPM;
+
+		return oldSnapshotGOSTPM.equals(snapshotGOSTPM);
+	}
+
+	private static String getSnapshot(String ip, int port) {
+
+		SSLSocket c = null;
+		String snapshot = "";
+
 		try {
-			SSLSocket c =
-					(SSLSocket) f.createSocket("localhost", 4443);
+
+			SSLSocketFactory f = 
+					(SSLSocketFactory) SSLSocketFactory.getDefault();
+
+			c =	(SSLSocket) f.createSocket(ip, port);
 
 			printSocketInfo(c);
 
-
 			c.startHandshake();
-			BufferedWriter w = new BufferedWriter(
-					new OutputStreamWriter(c.getOutputStream()));
+
 			BufferedReader r = new BufferedReader(
 					new InputStreamReader(c.getInputStream()));
-			String m = null;
-			while ((m=r.readLine())!= null) {
-				out.println(m);
-				m = in.readLine();
-				w.write(m,0,m.length());
-				w.newLine();
-				w.flush();
-			}
-			w.close();
+			String m;
+			while ((m  = r.readLine()) != null) 
+				snapshot += m;
+
 			r.close();
 			c.close();
 		} catch (IOException e) {
 			System.err.println(e.toString());
 		}
 
+		return snapshot;
 	}
 
 	private static void printSocketInfo(SSLSocket s) {

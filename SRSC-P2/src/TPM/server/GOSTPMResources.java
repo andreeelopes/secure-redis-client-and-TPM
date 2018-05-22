@@ -1,9 +1,8 @@
 package TPM.server;
 
 public class GOSTPMResources {
-
 	
-	public String attest() {
+	public static String snapshot() {
 		return "attest";
 	}
 	

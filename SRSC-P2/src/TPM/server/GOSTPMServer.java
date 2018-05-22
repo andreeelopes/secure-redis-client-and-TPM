@@ -1,8 +1,7 @@
 package TPM.server;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.InputStreamReader;
+import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.security.KeyStore;
 
@@ -24,9 +23,37 @@ public class GOSTPMServer {
 		//		char[]  ctPass = args[2].toCharArray();  // password entry
 		//		int port= Integer.parseInt(args[3]);
 
+		SSLServerSocket s  = establishSecureConnection(4443);
+
+	//	while(true)
+			sendSnapshot( GOSTPMResources.snapshot(), s );
+	}
+
+	private static void sendSnapshot(String snapshot, SSLServerSocket s) {
+
+		try {
+			SSLSocket c = (SSLSocket) s.accept();
+			printSocketInfo(c);
+
+			BufferedWriter w = new BufferedWriter(new OutputStreamWriter(
+					c.getOutputStream()));
+
+			w.write(snapshot,0,snapshot.length());
+			w.flush();
+			w.close();
+			c.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	private static SSLServerSocket establishSecureConnection(int port) {
 
 		String[] confciphersuites={"TLS_RSA_WITH_AES_256_CBC_SHA256"};
 		String[] confprotocols={"TLSv1.2"};
+
+		SSLServerSocket s = null;
 
 		try {
 			KeyStore ks = KeyManager.getOrCreateKeyStore("GOSTPMKeyStore.jks", "srscsrsc");
@@ -38,50 +65,19 @@ public class GOSTPMServer {
 			SSLContext sc = SSLContext.getInstance("TLS");
 			sc.init(kmf.getKeyManagers(), null, null);
 			SSLServerSocketFactory ssf = sc.getServerSocketFactory();
-			SSLServerSocket s = (SSLServerSocket) ssf.createServerSocket(4443);
+			s = (SSLServerSocket) ssf.createServerSocket(port);
 
 			s.setEnabledProtocols(confprotocols);
 			s.setEnabledCipherSuites(confciphersuites);
 
 			printServerSocketInfo(s);
 
-
-			SSLSocket c = (SSLSocket) s.accept();
-			printSocketInfo(c);
-			BufferedWriter w = new BufferedWriter(new OutputStreamWriter(
-					c.getOutputStream()));
-			BufferedReader r = new BufferedReader(new InputStreamReader(
-					c.getInputStream()));
-
-			// Service from this server ...
-			String m = "Welcome !"+
-					" Type in some words, I will reverse them.";
-			w.write(m,0,m.length());
-			w.newLine();
-			w.flush();
-			while ((m=r.readLine())!= null) {
-				if (m.equals(".")) break;
-				char[] a = m.toCharArray();
-				int n = a.length;
-				for (int i=0; i<n/2; i++) {
-					char t = a[i];
-					a[i] = a[n-1-i];
-					a[n-i-1] = t;
-				}
-				w.write(a,0,n);
-				w.newLine();
-				w.flush();
-			}
-			w.close();
-			r.close();
-			c.close();
-			s.close();
 		} catch (Exception e) {
 			System.err.println(e.toString());
 		}
-
-
+		return s;
 	}
+
 
 	private static void printSocketInfo(SSLSocket s) {
 		System.out.println("Socket class: "+s.getClass());
