@@ -2,6 +2,7 @@ package redis.client;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import utils.Pair;
 
@@ -47,80 +48,85 @@ cliente (inteiro), cartão de cidadão do cliente (string), data de emissão (st
 		redis.set(mainKey, "phone", phone);
 		redis.set(mainKey, "nif", NIF);
 	}
-	public List<List<Pair>>  getClientID(String value) {
+	public List<Map<String,String>>  getClientID(String value) {
 
-		List<List<Pair>> result = redis.get("Key", value);
+		List<Map<String,String>> result = redis.get("Key", value);
 		
 		//so para debug
 		for (int i = 0; i < result.size(); i++) {
-			Iterator<Pair> it = result.get(i).iterator();
+			Iterator<Map<String, String>> it = result.iterator();
 			while (it.hasNext()) {
-				Pair p = it.next();
-				System.out.print(p.getKey() + ": " + p.getValue() +" ");
+				Map<String, String> p = it.next();
+				for(String key: p.keySet())
+					System.out.print(key+": "+p.get(key)+" ");
 			}
 			System.out.println();
 		
 	}
 		return result;
 	}
-	public List<List<Pair>>  getClientCC(String value) {
+	public List<Map<String,String>>  getClientCC(String value) {
 
-		List<List<Pair>> result = redis.get("cc", value);
+		List<Map<String,String>> result = redis.get("cc", value);
 		
 		//so para debug
 		for (int i = 0; i < result.size(); i++) {
-			Iterator<Pair> it = result.get(i).iterator();
+			Iterator<Map<String, String>> it = result.iterator();
 			while (it.hasNext()) {
-				Pair p = it.next();
-				System.out.print(p.getKey() + ": " + p.getValue() +" ");
+				Map<String, String> p = it.next();
+				for(String key: p.keySet())
+					System.out.print(key+": "+p.get(key)+" ");
 			}
-		System.out.println();
-		
-	}
-		return result;
-	}
-	public List<List<Pair>>  getClientNIF(String value) {
-
-		List<List<Pair>> result = redis.get("nif", value);
-		
-		//so para debug
-		for (int i = 0; i < result.size(); i++) {
-			Iterator<Pair> it = result.get(i).iterator();
-			while (it.hasNext()) {
-				Pair p = it.next();
-				System.out.print(p.getKey() + ": " + p.getValue() +" ");
-			}
-		
 			System.out.println();
-		}
+		
+	}
 		return result;
 	}
-	public List<List<Pair>>  getClientAdd(String value) {
+	public List<Map<String,String>>  getClientNIF(String value) {
 
-			List<List<Pair>> result = redis.get("address", value);
+		List<Map<String,String>> result = redis.get("nif", value);
+		
+		//so para debug
+		for (int i = 0; i < result.size(); i++) {
+			Iterator<Map<String, String>> it = result.iterator();
+			while (it.hasNext()) {
+				Map<String, String> p = it.next();
+				for(String key: p.keySet())
+					System.out.print(key+": "+p.get(key)+" ");
+			}
+			System.out.println();
+		
+	}
+		return result;
+	}
+	public List<Map<String,String>>  getClientAdd(String value) {
+
+			List<Map<String,String>> result = redis.get("address", value);
 			
 			//so para debug
 			for (int i = 0; i < result.size(); i++) {
-				Iterator<Pair> it = result.get(i).iterator();
+				Iterator<Map<String, String>> it = result.iterator();
 				while (it.hasNext()) {
-					Pair p = it.next();
-					System.out.print(p.getKey() + ": " + p.getValue() +" ");
+					Map<String, String> p = it.next();
+					for(String key: p.keySet())
+						System.out.print(key+": "+p.get(key)+" ");
 				}
-			
 				System.out.println();
+			
 		}
 		return result;
 	}
-	public List<List<Pair>>  getClientDate(String value) {
+	public List<Map<String,String>>  getClientDate(String value) {
 
-			List<List<Pair>> result = redis.get("emissionDate", value);
+			List<Map<String,String>> result = redis.get("emissionDate", value);
 			
 			//so para debug
 			for (int i = 0; i < result.size(); i++) {
-				Iterator<Pair> it = result.get(i).iterator();
+				Iterator<Map<String, String>> it = result.iterator();
 				while (it.hasNext()) {
-					Pair p = it.next();
-					System.out.print(p.getKey() + ": " + p.getValue() +" ");
+					Map<String, String> p = it.next();
+					for(String key: p.keySet())
+						System.out.print(key+": "+p.get(key)+" ");
 				}
 				System.out.println();
 			
@@ -128,16 +134,17 @@ cliente (inteiro), cartão de cidadão do cliente (string), data de emissão (st
 		return result;
 	}
 	
-	public List<List<Pair>>  getClientPhone(String value) {
+	public List<Map<String,String>>  getClientPhone(String value) {
 
-			List<List<Pair>> result = redis.get("phone", value);
+			List<Map<String,String>> result = redis.get("phone", value);
 			
 			//so para debug
 			for (int i = 0; i < result.size(); i++) {
-				Iterator<Pair> it = result.get(i).iterator();
+				Iterator<Map<String, String>> it = result.iterator();
 				while (it.hasNext()) {
-					Pair p = it.next();
-					System.out.print(p.getKey() + ": " + p.getValue() +" ");
+					Map<String, String> p = it.next();
+					for(String key: p.keySet())
+						System.out.print(key+": "+p.get(key)+" ");
 				}
 				System.out.println();
 			

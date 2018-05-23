@@ -9,6 +9,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -56,7 +57,7 @@ public class SafeRedis {
 		ivParameterSpec = new IvParameterSpec(iv);
 	}	
 	
-	public List<List<Pair>> get(String field, String value) {
+	public List<Map<String, String>> get(String field, String value) {
 		Mac mac;
 		try {
 			byte[] valueByteArray = value.getBytes("ISO-8859-1");
@@ -64,20 +65,25 @@ public class SafeRedis {
 			mac.init(macKey);
 			byte[] hmacValue = mac.doFinal(valueByteArray);
 			Set<String> keys = jedis.smembers(field + ":" + new String(hmacValue, "ISO-8859-1"));
-			List<List<Pair>> result = new ArrayList<List<Pair>>(keys.size());
+			List<Map<String,String>> result = new ArrayList<Map<String,String>>(keys.size());
 			Iterator<String> it = keys.iterator();
 			for (int i = 0; it.hasNext(); i++) {
-				List<Pair> list = new LinkedList<Pair>();
-				Map<String, String> fields = jedis.hgetAll(it.next());
+				Map<String,String> list = new HashMap<String,String>();
+				String mainKey=it.next();
+				Map<String, String> fields = jedis.hgetAll(mainKey);
 				for (String key : fields.keySet()) {
 					byte[] encoded = fields.get(key).getBytes("ISO-8859-1");
 
 					Cipher cipher = Cipher.getInstance(config.getCipherSuite(), config.getCipherProvider());
 					cipher.init(cipher.DECRYPT_MODE, cipherKey, ivParameterSpec);
 					byte[] pArray = cipher.doFinal(encoded);
-					list.add(new Pair(key, new String(pArray, "ISO-8859-1")));
+					list.put(key, new String(pArray, "ISO-8859-1"));
 				}
-				result.add(list);
+				if(!this.checkIfisValid(mainKey,list))
+					this.remove(list.get("Key"));
+				else {
+					result.add(list);
+				}
 			}
 
 			return result;
@@ -87,6 +93,33 @@ public class SafeRedis {
 		}
 		return null;
 	}
+	
+	private boolean checkIfisValid(String mainKey, Map<String, String> map) {
+		try {
+		String[] hashValues=mainKey.split(" ");
+
+		byte[] tempbuffer;
+		String checkString;
+
+		for(int i=0;i<hashValues.length;i++) {
+			String[] hashValue=hashValues[i].split(":");
+			Pair p=new Pair(hashValue[0],hashValue[1]);
+			Mac mac;
+			mac = Mac.getInstance(config.getMacAlgorithm());
+			mac.init(macKey);
+			tempbuffer=map.get(p.getKey()).getBytes("ISO-8859-1");
+			tempbuffer=mac.doFinal(tempbuffer);
+			checkString=new String(tempbuffer,"ISO-8859-1");
+			if(!checkString.equals(p.getValue())) return false;
+		}
+		return true;
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return false;
+	}
+
 	public String makeHash(String field,String value)
 	{
 		try {
