@@ -25,7 +25,7 @@ public class GOSTPMServer {
 
 		SSLServerSocket s  = establishSecureConnection(4443);
 
-	//	while(true)
+		while(true)
 			sendSnapshot( GOSTPMResources.snapshot(), s );
 	}
 

@@ -11,12 +11,12 @@ import utils.Pair;
 public class Main {
 
 	public static void main(String[] args) {
-		RedisClient redis=new RedisClient();
-		redis.setClient(1, "ola", "ola", "ola", "ola", "ola");
-		redis.setClient(1, "ola", "adeus", "ola", "ola", "ola");
-		redis.removeClient(1);
-
-		redis.getClientDate("ola");
+//		RedisClient redis=new RedisClient();
+//		redis.setClient(1, "ola", "ola", "ola", "ola", "ola");
+//		redis.setClient(1, "ola", "adeus", "ola", "ola", "ola");
+//		redis.removeClient(1);
+//
+//		redis.getClientDate("ola");
 
 		
 		//client.remove("ola");
@@ -34,7 +34,7 @@ public class Main {
 				System.out.println(p.getKey() + ": " + p.getValue());
 			}
 		}*/
-		//System.out.println(TPMClient.atest("localhost", 4443, "localhost", 4443));
+		System.out.println(TPMClient.atest("localhost", 4443, "localhost", 4443));
 		
 		//	}
 	//	}	
