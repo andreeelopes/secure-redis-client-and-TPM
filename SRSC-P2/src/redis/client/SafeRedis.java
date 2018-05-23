@@ -70,8 +70,8 @@ public class SafeRedis {
 				List<Pair> list = new LinkedList<Pair>();
 				Map<String, String> fields = jedis.hgetAll(it.next());
 				for (String key : fields.keySet()) {
-
 					byte[] encoded = fields.get(key).getBytes("ISO-8859-1");
+
 					Cipher cipher = Cipher.getInstance(config.getCipherSuite(), config.getCipherProvider());
 					cipher.init(cipher.DECRYPT_MODE, cipherKey, ivParameterSpec);
 					byte[] pArray = cipher.doFinal(encoded);
@@ -105,7 +105,8 @@ public class SafeRedis {
 	}
 	public void set(String key, String field, String value) {
 		try {
-			//TODO: chave= h(valores de todos os fields)
+			
+			
 			byte[] valueByteArray = value.getBytes("ISO-8859-1");
 			
 			Cipher cipher = Cipher.getInstance(config.getCipherSuite(), config.getCipherProvider()); //cipher value
@@ -158,5 +159,24 @@ public class SafeRedis {
 			e.printStackTrace();
 		}
 		return false;
+	}
+	public void ifExistDel(String key) {
+		Mac mac;
+		byte[] valueByteArray;
+		try {
+			valueByteArray = key.getBytes("ISO-8859-1");
+		mac = Mac.getInstance(config.getMacAlgorithm());
+		mac.init(macKey);
+		byte[] hmacValue = mac.doFinal(valueByteArray);
+		String skey="Key" + ":" + new String(hmacValue, "ISO-8859-1");
+		Set<String> keys = jedis.smembers(skey);
+		if(keys.size()>0) {
+			this.remove(key);
+			jedis.spop(skey);
+		}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }
