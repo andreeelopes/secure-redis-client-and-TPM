@@ -13,8 +13,8 @@ public class Main {
 	public static void main(String[] args) {
 		RedisClient redis=new RedisClient();
 		redis.setClient(1, "ola", "ola", "ola", "ola", "ola");
-		redis.setClient(1, "ola", "adeus", "ola", "ola", "ola");
-		redis.removeClient(1);
+		//redis.setClient(1, "ola", "adeus", "ola", "ola", "ola");
+		//redis.removeClient(1);
 
 		redis.getClientDate("ola");
 
