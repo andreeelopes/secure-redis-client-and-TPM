@@ -57,9 +57,9 @@ public class SafeRedis {
 	}	
 	
 	public List<List<Pair>> get(String field, String value) {
-		byte[] valueByteArray = Utils.toByteArrayFromString(value);
 		Mac mac;
 		try {
+			byte[] valueByteArray = value.getBytes("ISO-8859-1");
 			mac = Mac.getInstance(config.getMacAlgorithm());
 			mac.init(macKey);
 			byte[] hmacValue = mac.doFinal(valueByteArray);
@@ -75,7 +75,7 @@ public class SafeRedis {
 					Cipher cipher = Cipher.getInstance(config.getCipherSuite(), config.getCipherProvider());
 					cipher.init(cipher.DECRYPT_MODE, cipherKey, ivParameterSpec);
 					byte[] pArray = cipher.doFinal(encoded);
-					list.add(new Pair(key, Utils.toStringFromByteArray(pArray)));
+					list.add(new Pair(key, new String(pArray, "ISO-8859-1")));
 				}
 				result.add(list);
 			}
@@ -87,17 +87,33 @@ public class SafeRedis {
 		}
 		return null;
 	}
+	public String makeHash(String field,String value)
+	{
+		try {
+		byte[] valueByteArray = value.getBytes("ISO-8859-1");
+		Mac mac = Mac.getInstance(config.getMacAlgorithm());
+		mac.init(macKey);
+		byte[] hmacValue = mac.doFinal(valueByteArray);
+	
+			return (field + ":" + new String(hmacValue, "ISO-8859-1"));
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+
+	}
 	public void set(String key, String field, String value) {
 		try {
 			//TODO: chave= h(valores de todos os fields)
-			byte[] valueByteArray = Utils.toByteArrayFromString(value);
+			byte[] valueByteArray = value.getBytes("ISO-8859-1");
 			
 			Cipher cipher = Cipher.getInstance(config.getCipherSuite(), config.getCipherProvider()); //cipher value
 			cipher.init(cipher.ENCRYPT_MODE, cipherKey, ivParameterSpec);
 			byte[] cipherValue = cipher.doFinal(valueByteArray);
 
 			String cipherStringValue = new String(cipherValue, "ISO-8859-1");
-			System.out.println(cipherStringValue);
+			
 			//	byte[] encoded = cipherStringValue.getBytes("ISO-8859-1");
 
 			jedis.hset(key, field, cipherStringValue);
@@ -108,7 +124,7 @@ public class SafeRedis {
 			Mac mac = Mac.getInstance(config.getMacAlgorithm());
 			mac.init(macKey);
 			byte[] hmacValue = mac.doFinal(valueByteArray);
-			System.out.println(new String(hmacValue, "ISO-8859-1"));
+			
 			jedis.sadd(field + ":" + new String(hmacValue, "ISO-8859-1"), key);
 
 
@@ -119,9 +135,9 @@ public class SafeRedis {
 	public boolean remove(String key) {
 		//remove se tiver uma lista onde a key é Key:(valor)
 		//Quando inserir definir a key no field Key
-		byte[] valueByteArray = Utils.toByteArrayFromString(key);
 		Mac mac;
 		try {
+			byte[] valueByteArray = key.getBytes("ISO-8859-1");
 			mac = Mac.getInstance(config.getMacAlgorithm());
 			mac.init(macKey);
 			byte[] hmacValue = mac.doFinal(valueByteArray);
@@ -130,7 +146,12 @@ public class SafeRedis {
 			if (!it.hasNext())
 				return false;
 			else {
-				jedis.del(it.next());
+				String keyHash=it.next();
+				String[] keysArray =keyHash.split(" ");
+				for(int i=0;i<keysArray.length;i++) {
+					jedis.srem(keysArray[i], keyHash);
+				}
+				jedis.del(keyHash);
 				return true;
 			}
 		} catch (Exception e) {
