@@ -19,6 +19,7 @@ public class XMLParser {
 		String macAlgorithm = null;
 		String cipherProvider = null;
 		String macProvider = null;
+		String iv = null;
 		int cipherKeySize = 0;
 		int macKeySize = 0;
 		try {
@@ -37,6 +38,7 @@ public class XMLParser {
 			cipherProvider = e.getElementsByTagName("cipherProvider").item(0).getTextContent();
 			cipherKeySize = Integer.parseInt(e.getElementsByTagName("cipherKeySize").item(0).getTextContent());
 			macKeySize = Integer.parseInt(e.getElementsByTagName("macKeySize").item(0).getTextContent());
+			iv = e.getElementsByTagName("iv").item(0).getTextContent();
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -44,6 +46,6 @@ public class XMLParser {
 		}
 
 		return new CipherConfig(macAlgorithm, cipherSuite, macProvider,
-				cipherProvider, cipherKeySize, macKeySize);
+				cipherProvider, cipherKeySize, macKeySize,iv);
 	}
 }

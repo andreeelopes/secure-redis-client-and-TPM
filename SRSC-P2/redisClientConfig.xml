@@ -6,4 +6,5 @@
 	<macProvider >SunJCE</macProvider>
 	<macKeySize>64</macKeySize>
 	<cipherProvider >SunJCE</cipherProvider>
+	<iv>uusfDRYvid0wlIP/EkVZaA==</iv>
 </config>

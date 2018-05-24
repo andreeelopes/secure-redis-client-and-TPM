@@ -10,17 +10,22 @@ public class CipherConfig {
 	private int cipherKeySize;
 	private int macKeySize;
 	private String cipherAlg; 
+	private String iv;
 
 
 	public CipherConfig(String macAlgorithm, String cipherSuite, String macProvider, String cipherProvider,
-			int cipherKeySize, int macKeySize) {
+			int cipherKeySize, int macKeySize, String iv) {
 		this.macAlgorithm = macAlgorithm;
 		this.cipherSuite = cipherSuite;
 		this.macProvider = macProvider;
 		this.cipherProvider = cipherProvider;
 		this.cipherKeySize = cipherKeySize;
 		this.macKeySize = macKeySize;
+		this.iv=iv;
 		this.cipherAlg = cipherSuite.split("/")[0];
+	}
+	public String getIv() {
+		return iv;
 	}
 
 	public String getMacAlgorithm() {
