@@ -39,10 +39,13 @@ public class TPMClient {
 	private static String oldSnapshotGOSTPM = "";
 	private static String oldSnapshotVMSTPM = "";
 
-	MyCache cache;
+	private MyCache cache;
 	private static final int TIMETOEXPIRE = 10000;
 
 	private static Gson gson = new GsonBuilder().create();
+	
+	private static SSLSocket c;
+
 
 
 	private static BigInteger g512 = new BigInteger(
@@ -71,7 +74,7 @@ public class TPMClient {
 		String snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM);
 		//String snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM);
 
-		System.out.println("\n\n\n\n\nxxxxxxxx" + snapshotGOSTPM) ;
+	//	System.out.println("\n\n\n\n\nxxxxxxxx" + snapshotGOSTPM) ;
 
 		return atestGOSTPM(snapshotGOSTPM); //&& atestVMSTPM(snapshotVMSTPM);
 	}
@@ -92,7 +95,6 @@ public class TPMClient {
 
 	private static String getSnapshot(String ip, int port) {
 
-		SSLSocket c = null;
 		String snapshot = "";
 
 		try {
@@ -106,17 +108,18 @@ public class TPMClient {
 
 			c.startHandshake();
 
-			requestSnapshotDH(c);
-			//snapshot = receiveSnapshotDH(); e depois comparar
+			KeyAgreement aKeyAgree = requestSnapshotDH();
+			//snapshot = receiveSnapshotDH(aKeyAgree, c); //e depois comparar
 
-			BufferedReader r = new BufferedReader(
-					new InputStreamReader(c.getInputStream()));
-			String m;
-			while ((m  = r.readLine()) != null) 
-				snapshot += m;
+			//			BufferedReader r = new BufferedReader(
+			//					new InputStreamReader(c.getInputStream()));
+			//			String m;
+			//			while ((m  = r.readLine()) != null) 
+			//				snapshot += m;
 
-			r.close();
-			c.close();
+			//			r.close();
+			//System.out.println("close socket");
+			//c.close();
 		} catch (IOException e) {
 			System.err.println(e.toString());
 		}
@@ -124,14 +127,36 @@ public class TPMClient {
 		return snapshot;
 	}
 
-	private static KeyAgreement requestSnapshotDH(SSLSocket c) {
+	private static String receiveSnapshotDH(KeyAgreement aKeyAgree, SSLSocket c) {
+		return oldSnapshotGOSTPM;
+//		bufferedreader r;
+//		try {
+//			
+//			r = new bufferedreader(
+//					new inputstreamreader(c.getinputstream()));
+//			
+//			string msgdhreply = "";
+//			string m;
+//			while ((m  = r.readline()) != null) 
+//				msgdhreply += m;
+//			r.close();
+//
+//			system.out.println(msgdhreply);
+//		} catch (ioexception e) {
+//			e.printstacktrace();
+//		}
+	
+	}
+
+	private static KeyAgreement requestSnapshotDH() {
+
 
 		DHParameterSpec dhParams = new DHParameterSpec(p512, g512);
 
 		String requestMsg = "";
 		KeyAgreement aKeyAgree = null;
 		try {
-			KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DH", "BC");
+			KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DH", "BC"); //TODO criar cada vez que se concta ou guardar numa keystore
 			keyGen.initialize(dhParams, new SecureRandom());
 
 			aKeyAgree = KeyAgreement.getInstance("DH", "BC");
@@ -145,7 +170,9 @@ public class TPMClient {
 					new OutputStreamWriter(c.getOutputStream()));
 
 			w.write(requestMsg);
-			w.close();
+			//w.close();
+
+			while(true);
 
 		} catch (InvalidAlgorithmParameterException | NoSuchAlgorithmException | NoSuchProviderException | InvalidKeyException | IOException e1) {
 			e1.printStackTrace();
@@ -153,11 +180,6 @@ public class TPMClient {
 
 		return aKeyAgree;
 
-	}
-
-	private static byte[] getYa() {
-
-		return null;
 	}
 
 	private static void printSocketInfo(SSLSocket s) {

@@ -1,9 +1,12 @@
 package TPM.server;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.security.KeyStore;
+import java.security.PublicKey;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -12,9 +15,24 @@ import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import json.TPMClientMsg;
 import utils.KeyManager;
+import utils.MyCache;
 
 public class GOSTPMServer {
+
+	private static Gson gson = new GsonBuilder().create();
+
+	private static MyCache cache;
+	private static final int TIMETOEXPIRE = 10000;
+	
+	private static PublicKey pubDH;
+	private static int nonceC;
+	private static SSLSocket c;
+
 
 	public static void main(String[] args) {
 
@@ -23,10 +41,59 @@ public class GOSTPMServer {
 		//		char[]  ctPass = args[2].toCharArray();  // password entry
 		//		int port= Integer.parseInt(args[3]);
 
+
+		cache = new MyCache();
+
 		SSLServerSocket s  = establishSecureConnection(4443);
 
-		while(true)
-			sendSnapshot( GOSTPMResources.snapshot(), s );
+		while(true) {
+			try {
+				c = (SSLSocket) s.accept();
+				printSocketInfo(c);
+				
+				if( !receiveSnapRequestDH() ) {
+					c.close();
+					continue;
+				}
+				//sendSnapshot( GOSTPMResources.snapshot(), s );
+				c.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+		}
+	}
+
+	private static boolean receiveSnapRequestDH() {
+		try {
+
+			BufferedReader r = new BufferedReader(
+					new InputStreamReader(c.getInputStream()));
+			String msgDHRequest = "";
+			String m;
+			
+			while ((m  = r.readLine()) != null) 
+				msgDHRequest += m;
+			//r.close();
+			
+			System.out.println(msgDHRequest);
+
+			TPMClientMsg msg = gson.fromJson(msgDHRequest, TPMClientMsg.class);
+
+			if(msg.attestRequestCode != '0' || !cache.isValid( msg.nonceC)) 
+				return false;
+			else {
+				cache.add( msg.nonceC, TIMETOEXPIRE);			
+				nonceC = msg.nonceC;
+				pubDH = msg.pubDH;
+			}
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return true;
+
 	}
 
 	private static void sendSnapshot(String snapshot, SSLServerSocket s) {
