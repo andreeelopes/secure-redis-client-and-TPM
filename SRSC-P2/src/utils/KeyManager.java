@@ -4,8 +4,13 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.Key;
+import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStore.PasswordProtection;
+import java.security.KeyStoreException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.cert.Certificate;
 import java.util.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
@@ -59,8 +64,26 @@ public class KeyManager {
 
 		return secretKey;
 	}
-	
-	
+
+	public static KeyPair getKeyPair(String entryName, String keyMasterPwd, String keyStoreFile, String keyStorePwd) {
+
+		PublicKey publicKey = null;
+		Key key = getKey(entryName, keyMasterPwd, keyStoreFile, keyStorePwd);
+		try {
+			if (key instanceof PrivateKey) {
+				Certificate cert;
+				cert = getOrCreateKeyStore(keyStoreFile, keyStorePwd).getCertificate(entryName);
+				// Get now public key
+				publicKey = cert.getPublicKey();
+			}
+
+		} catch (KeyStoreException e) {
+			e.printStackTrace();
+		}
+
+		return new KeyPair(publicKey, (PrivateKey)key);
+	}
+
 
 	public static void storeKey(SecretKey key, String entryName, String keyMasterPwd, String keyStoreFile, String keyStorePwd) {
 
@@ -92,7 +115,7 @@ public class KeyManager {
 
 		return key;
 	}
-	
+
 
 	public static Key getOrCreateKey(String keyName, String algorithm, String provider, 
 			int keySize, String keyMasterPwd, String keyStoreFile, String keyStorePwd) {

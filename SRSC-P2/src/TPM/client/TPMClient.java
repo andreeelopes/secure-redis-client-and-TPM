@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
@@ -14,14 +15,17 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import javax.crypto.KeyAgreement;
 import javax.crypto.spec.DHParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -38,24 +42,28 @@ import utils.Utils;
 
 public class TPMClient {
 
-	private static String oldSnapshotGOSTPM = "";
-	private static String oldSnapshotVMSTPM = "";
+	private String oldSnapshotGOSTPM = "";
+	private String oldSnapshotVMSTPM = "";
 
 	private MyCache cache;
-	private static final int TIMETOEXPIRE = 10000;
+	private final int TIMETOEXPIRE = 10000;
+	
+	private int nonceC;
+	
+	private KeyPair aPair;
+	private SecretKeySpec key;
+	private PublicKey bPub;
 
-	private static Gson gson = new GsonBuilder().create();
+	private Gson gson = new GsonBuilder().create();
 
-	private static SSLSocket c;
+	private SSLSocket c;
 
-
-
-	private static BigInteger g512 = new BigInteger(
+	private BigInteger g512 = new BigInteger(
 			"153d5d6172adb43045b68ae8e1de1070b6137005686d29d3d73a7"
 					+ "749199681ee5b212c9b96bfdcfa5b20cd5e3fd2044895d609cf9b"
 					+ "410b7a0f12ca1cb9a428cc", 16);
 
-	private static BigInteger p512 = new BigInteger(
+	private BigInteger p512 = new BigInteger(
 			"9494fec095f3b85ee286542b3836fc81a5dd0a0349b4c239dd387"
 					+ "44d488cf8e31db8bcb7d33b41abb9e5a33cca9144b1cef332c94b"
 					+ "f0573bf047a3aca98cdf3b", 16);
@@ -71,7 +79,7 @@ public class TPMClient {
 
 	}
 
-	public static boolean atest(String ipGOSTPM, int portGOSTPM, String ipVMSTPM, int portVMSTPM) {
+	public boolean atest(String ipGOSTPM, int portGOSTPM, String ipVMSTPM, int portVMSTPM) {
 
 		String snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM);
 		//String snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM);
@@ -81,21 +89,21 @@ public class TPMClient {
 		return atestGOSTPM(snapshotGOSTPM); //&& atestVMSTPM(snapshotVMSTPM);
 	}
 
-	private static boolean atestVMSTPM(String snapshotVMSTPM) {
+	private boolean atestVMSTPM(String snapshotVMSTPM) {
 		if(oldSnapshotVMSTPM.equals("") )
 			oldSnapshotVMSTPM = snapshotVMSTPM;
 
 		return oldSnapshotVMSTPM.equals(snapshotVMSTPM);
 	}
 
-	private static boolean atestGOSTPM(String snapshotGOSTPM) {
+	private boolean atestGOSTPM(String snapshotGOSTPM) {
 		if(oldSnapshotGOSTPM.equals("") )
 			oldSnapshotGOSTPM = snapshotGOSTPM;
 
 		return oldSnapshotGOSTPM.equals(snapshotGOSTPM);
 	}
 
-	private static String getSnapshot(String ip, int port) {
+	private String getSnapshot(String ip, int port) {
 
 		String snapshot = "";
 
@@ -110,8 +118,8 @@ public class TPMClient {
 
 			c.startHandshake();
 
-			KeyAgreement aKeyAgree = requestSnapshotDH();
-			//snapshot = receiveSnapshotDH(aKeyAgree, c); //e depois comparar
+			requestSnapshotDH();
+			snapshot = receiveSnapshotDH(); //e depois comparar
 
 			//			BufferedReader r = new BufferedReader(
 			//					new InputStreamReader(c.getInputStream()));
@@ -129,65 +137,74 @@ public class TPMClient {
 		return snapshot;
 	}
 
-	private static String receiveSnapshotDH(KeyAgreement aKeyAgree, SSLSocket c) {
-		return oldSnapshotGOSTPM;
-		//		bufferedreader r;
-		//		try {
-		//			
-		//			r = new bufferedreader(
-		//					new inputstreamreader(c.getinputstream()));
-		//			
-		//			string msgdhreply = "";
-		//			string m;
-		//			while ((m  = r.readline()) != null) 
-		//				msgdhreply += m;
-		//			r.close();
-		//
-		//			system.out.println(msgdhreply);
-		//		} catch (ioexception e) {
-		//			e.printstacktrace();
-		//		}
+	private void requestSnapshotDH() {
 
-	}
-
-	private static KeyAgreement requestSnapshotDH() {
-
-
-		DHParameterSpec dhParams = new DHParameterSpec(p512, g512);
-
-		String requestMsg = "";
-		KeyAgreement aKeyAgree = null;
 		try {
+			DHParameterSpec dhParams = new DHParameterSpec(p512, g512);
 			KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DH", "BC"); //TODO criar cada vez que se concta ou guardar numa keystore
 			keyGen.initialize(dhParams, new SecureRandom());
-
-			aKeyAgree = KeyAgreement.getInstance("DH", "BC");
-			KeyPair      aPair = keyGen.generateKeyPair();
-
-			aKeyAgree.init(aPair.getPrivate());
-
+			aPair = keyGen.generateKeyPair();
+			
 			ObjectOutputStream w = new ObjectOutputStream(c.getOutputStream());
 
-			
-			System.out.println(Utils.toHex(aPair.getPublic().getEncoded()));
+			//System.out.println(Utils.toHex(aPair.getPublic().getEncoded()));
 
-			w.writeInt( new SecureRandom().nextInt());
+			w.writeChar('0');
+			w.writeInt( nonceC = new SecureRandom().nextInt());
 			w.writeObject(aPair.getPublic());
 
 			w.flush();
 			//w.close();
 
-			while(true);
-
-		} catch (InvalidAlgorithmParameterException | NoSuchAlgorithmException | NoSuchProviderException | InvalidKeyException | IOException e1) {
+		} catch (InvalidAlgorithmParameterException | NoSuchAlgorithmException | NoSuchProviderException | IOException e1) {
 			e1.printStackTrace();
 		} 
-
-		return aKeyAgree;
-
 	}
 
-	private static void printSocketInfo(SSLSocket s) {
+	private String receiveSnapshotDH() {
+
+		try {
+			ObjectInputStream r = new ObjectInputStream(c.getInputStream());
+
+
+			char attestRequestCode = r.readChar();
+			int nonceS = r.readInt();
+
+			if(attestRequestCode != '1' || nonceS != nonceC + 1 || !cache.isValid( nonceS ) ) 
+				return null;
+			
+			cache.add( nonceS, TIMETOEXPIRE);			
+				
+			bPub = (PublicKey) r.readObject();
+			generateKeyDH();
+
+			
+			r.close();
+		} catch (IOException | ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+		return "lala";
+	}
+
+	private void generateKeyDH() {
+	
+		try {
+			KeyAgreement aKeyAgree = KeyAgreement.getInstance("DH", "BC");
+			aKeyAgree.init(aPair.getPrivate());
+			aKeyAgree.doPhase(bPub, true);
+			MessageDigest hash = MessageDigest.getInstance("SHA1", "BC");
+			
+			byte[] keyBytes = hash.digest(aKeyAgree.generateSecret());
+			key = new SecretKeySpec(keyBytes, "AES");
+			//System.out.println(Utils.toHex(key.getEncoded()));
+
+		} catch (InvalidKeyException | IllegalStateException | NoSuchAlgorithmException | NoSuchProviderException e) {
+			e.printStackTrace();
+		}
+        		
+	}
+
+	private void printSocketInfo(SSLSocket s) {
 
 		System.out.println("\n------------------------------------------------------\n");
 		System.out.println("Socket class: "+s.getClass());
