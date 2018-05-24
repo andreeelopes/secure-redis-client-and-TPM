@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.security.KeyStore;
 import java.security.PublicKey;
@@ -21,6 +23,7 @@ import com.google.gson.GsonBuilder;
 import json.TPMClientMsg;
 import utils.KeyManager;
 import utils.MyCache;
+import utils.Utils;
 
 public class GOSTPMServer {
 
@@ -28,7 +31,7 @@ public class GOSTPMServer {
 
 	private static MyCache cache;
 	private static final int TIMETOEXPIRE = 10000;
-	
+
 	private static PublicKey pubDH;
 	private static int nonceC;
 	private static SSLSocket c;
@@ -50,7 +53,7 @@ public class GOSTPMServer {
 			try {
 				c = (SSLSocket) s.accept();
 				printSocketInfo(c);
-				
+
 				if( !receiveSnapRequestDH() ) {
 					c.close();
 					continue;
@@ -67,28 +70,22 @@ public class GOSTPMServer {
 	private static boolean receiveSnapRequestDH() {
 		try {
 
-			BufferedReader r = new BufferedReader(
-					new InputStreamReader(c.getInputStream()));
-			String msgDHRequest = "";
-			String m;
-			
-			while ((m  = r.readLine()) != null) 
-				msgDHRequest += m;
-			//r.close();
-			
-			System.out.println(msgDHRequest);
+			ObjectInputStream w = new ObjectInputStream(c.getInputStream());			
 
-			TPMClientMsg msg = gson.fromJson(msgDHRequest, TPMClientMsg.class);
+			
+			
+			char attestRequestCode = '0';
+			nonceC = w.readInt();
 
-			if(msg.attestRequestCode != '0' || !cache.isValid( msg.nonceC)) 
+			if(attestRequestCode != '0' || !cache.isValid( nonceC) ) 
 				return false;
 			else {
-				cache.add( msg.nonceC, TIMETOEXPIRE);			
-				nonceC = msg.nonceC;
-				pubDH = msg.pubDH;
+				cache.add( nonceC, TIMETOEXPIRE);			
+				pubDH = (PublicKey) w.readObject();
+				System.out.println(Utils.toHex(pubDH.getEncoded()));
 			}
 
-		} catch (IOException e) {
+		} catch (IOException | ClassNotFoundException e) {
 			e.printStackTrace();
 		}
 

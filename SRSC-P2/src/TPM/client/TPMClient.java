@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.math.BigInteger;
@@ -33,6 +34,7 @@ import com.google.gson.GsonBuilder;
 
 import json.TPMClientMsg;
 import utils.MyCache;
+import utils.Utils;
 
 public class TPMClient {
 
@@ -43,7 +45,7 @@ public class TPMClient {
 	private static final int TIMETOEXPIRE = 10000;
 
 	private static Gson gson = new GsonBuilder().create();
-	
+
 	private static SSLSocket c;
 
 
@@ -74,7 +76,7 @@ public class TPMClient {
 		String snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM);
 		//String snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM);
 
-	//	System.out.println("\n\n\n\n\nxxxxxxxx" + snapshotGOSTPM) ;
+		//	System.out.println("\n\n\n\n\nxxxxxxxx" + snapshotGOSTPM) ;
 
 		return atestGOSTPM(snapshotGOSTPM); //&& atestVMSTPM(snapshotVMSTPM);
 	}
@@ -129,23 +131,23 @@ public class TPMClient {
 
 	private static String receiveSnapshotDH(KeyAgreement aKeyAgree, SSLSocket c) {
 		return oldSnapshotGOSTPM;
-//		bufferedreader r;
-//		try {
-//			
-//			r = new bufferedreader(
-//					new inputstreamreader(c.getinputstream()));
-//			
-//			string msgdhreply = "";
-//			string m;
-//			while ((m  = r.readline()) != null) 
-//				msgdhreply += m;
-//			r.close();
-//
-//			system.out.println(msgdhreply);
-//		} catch (ioexception e) {
-//			e.printstacktrace();
-//		}
-	
+		//		bufferedreader r;
+		//		try {
+		//			
+		//			r = new bufferedreader(
+		//					new inputstreamreader(c.getinputstream()));
+		//			
+		//			string msgdhreply = "";
+		//			string m;
+		//			while ((m  = r.readline()) != null) 
+		//				msgdhreply += m;
+		//			r.close();
+		//
+		//			system.out.println(msgdhreply);
+		//		} catch (ioexception e) {
+		//			e.printstacktrace();
+		//		}
+
 	}
 
 	private static KeyAgreement requestSnapshotDH() {
@@ -164,12 +166,15 @@ public class TPMClient {
 
 			aKeyAgree.init(aPair.getPrivate());
 
-			requestMsg = gson.toJson(new TPMClientMsg('0', aPair.getPublic(), new SecureRandom().nextInt()));
+			ObjectOutputStream w = new ObjectOutputStream(c.getOutputStream());
 
-			BufferedWriter w = new BufferedWriter(
-					new OutputStreamWriter(c.getOutputStream()));
+			
+			System.out.println(Utils.toHex(aPair.getPublic().getEncoded()));
 
-			w.write(requestMsg);
+			w.writeInt( new SecureRandom().nextInt());
+			w.writeObject(aPair.getPublic());
+
+			w.flush();
 			//w.close();
 
 			while(true);
