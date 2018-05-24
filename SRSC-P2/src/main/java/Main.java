@@ -20,6 +20,14 @@ public class Main {
 		//		redis.getClientDate("ola");
 
 
+		//		RedisClient redis=new RedisClient();
+		//		redis.setClient(1, "ola", "ola", "ola", "ola", "ola");
+		//		//redis.setClient(1, "ola", "adeus", "ola", "ola", "ola");
+		//		
+		//
+		//		redis.getClientDate("ola");
+
+
 		//client.remove("ola");
 		//		// TODO Auto-generated method stub
 		//		SafeRedis client = new SafeRedis();
@@ -37,8 +45,6 @@ public class Main {
 		}*/
 		new TPMClient().atest("localhost", 4443, "localhost", 4443);
 
-		//	}
-		//	}	
 	}
 
 }
