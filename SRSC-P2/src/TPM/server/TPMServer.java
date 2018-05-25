@@ -159,7 +159,7 @@ public class TPMServer {
 			w.writeChar('1');
 			encryptSnapshot();
 			signAndSend();
-			snapshot();
+			//snapshot();
 			w.flush();
 
 		} catch (IOException e) {
@@ -190,7 +190,7 @@ public class TPMServer {
 					new byte[] { 0x08, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 ,
 							0x08, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 
 			}; 
-			
+
 
 			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS7Padding", "BC");
 			cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(ivBytes));
@@ -230,12 +230,12 @@ public class TPMServer {
 			w.writeInt(signBytes.length);
 			w.write(signBytes);
 
-//			System.out.println(nonceC + 1);
-//			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
-//			System.out.println(encryptedSnapBytes.length);
-//			System.out.println(Utils.toHex(encryptedSnapBytes));
-//			System.out.println(signBytes.length);
-//			System.out.println(Utils.toHex(signBytes));
+			//			System.out.println(nonceC + 1);
+			//			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
+			//			System.out.println(encryptedSnapBytes.length);
+			//			System.out.println(Utils.toHex(encryptedSnapBytes));
+			//			System.out.println(signBytes.length);
+			//			System.out.println(Utils.toHex(signBytes));
 
 		} catch (IOException | InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException e) {
 			e.printStackTrace();
@@ -261,7 +261,7 @@ public class TPMServer {
 
 			byte[] keyBytes = hash.digest(bKeyAgree.generateSecret());
 			key = new SecretKeySpec(keyBytes, "AES");
-			
+
 		} catch (NoSuchAlgorithmException | NoSuchProviderException | InvalidAlgorithmParameterException | InvalidKeyException e) {
 			e.printStackTrace();
 		} 

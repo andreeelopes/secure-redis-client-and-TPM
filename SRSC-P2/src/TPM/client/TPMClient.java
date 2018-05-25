@@ -76,13 +76,24 @@ public class TPMClient {
 		oldSnapshotVMSTPM = new LinkedList<String>();
 	}
 
-	public boolean atest(String ipGOSTPM, int portGOSTPM, String ipVMSTPM, int portVMSTPM) {
+	volatile List<String> snapshotGOSTPM = null;
+	volatile List<String> snapshotVMSTPM = null;
 
-		List<String> snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM);
+	public boolean attest(String ipGOSTPM, int portGOSTPM, String ipVMSTPM, int portVMSTPM) {
+
+		//List<String> snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM);
 		//List<String> snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM);
 
-		//lançar duas threads, fazer join 
-		
+		Thread GOSTPMThread = new Thread(() -> getSnapshot(ipGOSTPM, portGOSTPM));
+		//Thread VMSTPMThread = new Thread(() -> snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM));
+
+		try {
+			GOSTPMThread.join();
+			//VMSTPMThread.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
 		return attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM); //&& attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM); 
 	}
 
@@ -128,6 +139,8 @@ public class TPMClient {
 			System.err.println(e.toString());
 		}
 
+		System.out.println(snapshot.get(0));
+		
 		return snapshot;
 	}
 
@@ -183,12 +196,12 @@ public class TPMClient {
 			signStream.writeInt(signBytes.length);
 			signStream.write(signBytes);
 
-//			System.out.println(nonceS);
-//			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
-//			System.out.println(encryptedSnapBytes.length);
-//			System.out.println(Utils.toHex(encryptedSnapBytes));
-//			System.out.println(signBytes.length);
-//			System.out.println(Utils.toHex(signBytes));
+			//			System.out.println(nonceS);
+			//			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
+			//			System.out.println(encryptedSnapBytes.length);
+			//			System.out.println(Utils.toHex(encryptedSnapBytes));
+			//			System.out.println(signBytes.length);
+			//			System.out.println(Utils.toHex(signBytes));
 
 
 			byte[] msg = out.toByteArray();
