@@ -1,16 +1,10 @@
 package TPM.client;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintStream;
 import java.math.BigInteger;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -29,7 +23,6 @@ import java.security.cert.Certificate;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -37,18 +30,12 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyAgreement;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.DHParameterSpec;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
-import json.TPMClientMsg;
 import utils.KeyManager;
 import utils.MyCache;
 import utils.Utils;
@@ -69,7 +56,6 @@ public class TPMClient {
 
 	private ObjectInputStream r;
 	private ObjectOutputStream w;
-	private Gson gson = new GsonBuilder().create();
 
 	private SSLSocket c;
 
@@ -95,10 +81,15 @@ public class TPMClient {
 		List<String> snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM);
 		//List<String> snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM);
 
+		//lançar duas threads, fazer join 
+		
 		return attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM); //&& attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM); 
 	}
 
 	private boolean attestTPM(List<String> snapshotGOSTPM, List<String> oldSnapshotTPM) {
+
+		if(snapshotGOSTPM == null)
+			return false;
 
 		if(oldSnapshotGOSTPM.isEmpty()) {
 			oldSnapshotGOSTPM = snapshotGOSTPM;
@@ -109,7 +100,7 @@ public class TPMClient {
 			if(!oldSnapshotGOSTPM.contains(string) )
 				return false;
 		}
-		
+
 		return true;
 	}
 
@@ -130,10 +121,9 @@ public class TPMClient {
 			requestSnapshotDH();
 			snapshot = receiveSnapshotDH(); 
 
-			while(true)
-				;
-//			w.close();
-//			c.close();
+
+			w.close();
+			c.close();
 		} catch (IOException e) {
 			System.err.println(e.toString());
 		}
@@ -163,28 +153,44 @@ public class TPMClient {
 	}
 
 	private List<String> receiveSnapshotDH() {
-		
+
 		List<String> snapshot = null;
 		try {
 			r = new ObjectInputStream(c.getInputStream());
-						
+
 			char attestRequestCode = r.readChar();
 			int nonceS = r.readInt();
 
 			if(attestRequestCode != '1' || nonceS != nonceC + 1 || !cache.isValid( nonceS ) ) 
 				return null;
 
-			cache.add( nonceS, TIMETOEXPIRE);			
+			cache.add( nonceS, TIMETOEXPIRE);
 
 			bPubNumber = (PublicKey) r.readObject();
-			int signSize = r.readInt();
-			byte [] signBytes = new byte[signSize];
+
+			byte[] encryptedSnapBytes = new byte[r.readInt()];
+			r.read(encryptedSnapBytes);
+
+			byte [] signBytes = new byte[r.readInt()];
 			r.read(signBytes);
 
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			ObjectOutputStream signStream = new ObjectOutputStream(out);
 			signStream.writeInt(nonceS);			
 			signStream.writeObject(bPubNumber);	
+			signStream.writeInt(encryptedSnapBytes.length);
+			signStream.write(encryptedSnapBytes);
+			signStream.writeInt(signBytes.length);
+			signStream.write(signBytes);
+
+//			System.out.println(nonceS);
+//			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
+//			System.out.println(encryptedSnapBytes.length);
+//			System.out.println(Utils.toHex(encryptedSnapBytes));
+//			System.out.println(signBytes.length);
+//			System.out.println(Utils.toHex(signBytes));
+
+
 			byte[] msg = out.toByteArray();
 
 			if(!verifySignature( signBytes, msg ))
@@ -192,12 +198,10 @@ public class TPMClient {
 
 			generateKeyDH();
 
-			byte[] encryptedSnapBytes = new byte[r.readInt()];
-			r.read(encryptedSnapBytes);
 			snapshot = decryptSnapshot( encryptedSnapBytes );
 
 			r.close();
-			
+
 		} catch (IOException | ClassNotFoundException e ) {
 			e.printStackTrace();
 		}
@@ -209,10 +213,14 @@ public class TPMClient {
 
 		List<String> snapshot = null;
 		try {
-			//TODO HMAC
+
+			byte[]	ivBytes = 
+					new byte[] { 0x08, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 ,
+							0x08, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 
+			}; 
 
 			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS7Padding", "BC");
-			cipher.init(Cipher.DECRYPT_MODE, key);
+			cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(ivBytes));
 			byte text[] = cipher.doFinal(encryptedSnapBytes);
 
 			ByteArrayInputStream in = new ByteArrayInputStream(text);
@@ -221,7 +229,7 @@ public class TPMClient {
 			snapshot = (List<String>) snapStream.readObject();
 
 		} catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | IllegalBlockSizeException |
-				BadPaddingException | InvalidKeyException | IOException | ClassNotFoundException e) {
+				BadPaddingException | InvalidKeyException | IOException | ClassNotFoundException | InvalidAlgorithmParameterException e) {
 			e.printStackTrace();
 		}
 
@@ -237,7 +245,7 @@ public class TPMClient {
 			Certificate cert = keyStore.getCertificate("gostpmservercert");
 			PublicKey publicKey = cert.getPublicKey();
 
-			Signature signature = Signature.getInstance("SHA512withRSA", "BC");
+			Signature signature = Signature.getInstance("SHA256withRSA", "BC");
 
 			signature.initVerify(publicKey);
 			signature.update(msg);
@@ -258,7 +266,7 @@ public class TPMClient {
 			KeyAgreement aKeyAgree = KeyAgreement.getInstance("DH", "BC");
 			aKeyAgree.init(aPair.getPrivate());
 			aKeyAgree.doPhase(bPubNumber, true);
-			MessageDigest hash = MessageDigest.getInstance("SHA1", "BC");
+			MessageDigest hash = MessageDigest.getInstance("SHA256", "BC");
 
 			byte[] keyBytes = hash.digest(aKeyAgree.generateSecret());
 			key = new SecretKeySpec(keyBytes, "AES");

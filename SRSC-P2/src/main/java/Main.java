@@ -43,7 +43,7 @@ public class Main {
 				System.out.println(p.getKey() + ": " + p.getValue());
 			}
 		}*/
-		new TPMClient().atest("localhost", 4443, "localhost", 4443);
+		System.out.println(new TPMClient().atest("localhost", 4443, "localhost", 4443));
 
 	}
 
