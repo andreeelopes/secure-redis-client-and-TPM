@@ -20,8 +20,16 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.Signature;
+import java.security.SignatureException;
+import java.util.LinkedList;
+import java.util.List;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyAgreement;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.DHParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -47,7 +55,7 @@ public class GOSTPMServer {
 	private static MyCache cache;
 	private static final int TIMETOEXPIRE = 10000;
 
-	private static PublicKey aPub;
+	private static PublicKey aPubNumber;
 	private static int nonceC;
 	private static SSLSocket c;
 
@@ -62,9 +70,11 @@ public class GOSTPMServer {
 					+ "44d488cf8e31db8bcb7d33b41abb9e5a33cca9144b1cef332c94b"
 					+ "f0573bf047a3aca98cdf3b", 16);
 
-	private static PublicKey bPub;
+	private static PublicKey bPubNumber;
 
 	private static SecretKey key;
+
+	private static ObjectOutputStream w;
 
 	public static void main(String[] args) {
 
@@ -138,8 +148,7 @@ public class GOSTPMServer {
 				return false;
 
 			cache.add( nonceC, TIMETOEXPIRE);			
-			aPub = (PublicKey) r.readObject();
-			//System.out.println(Utils.toHex(pubDH.getEncoded()));
+			aPubNumber = (PublicKey) r.readObject();
 
 
 		} catch (IOException | ClassNotFoundException e) {
@@ -153,22 +162,13 @@ public class GOSTPMServer {
 	private static void sendSnapshotDH() {
 		try {
 
-			//			KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DH", "BC"); //TODO criar cada vez que se concta ou guardar numa keystore
-			//			keyGen.initialize(dhParams, new SecureRandom());
-			//
-			//			aKeyAgree = KeyAgreement.getInstance("DH", "BC");
-			//			KeyPair      aPair = keyGen.generateKeyPair();
-			//
-			//			aKeyAgree.init(aPair.getPrivate());
-
-			ObjectOutputStream w = new ObjectOutputStream(c.getOutputStream());			
+			w = new ObjectOutputStream(c.getOutputStream());			
 
 			generateKeyDH();
 			w.writeChar('1');
-			//sign(w);
-
+			sign();
+			encryptSnapshot();
 			w.flush();
-			//w.close();
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -176,21 +176,61 @@ public class GOSTPMServer {
 	}
 
 
-	private static void sign(ObjectOutputStream w) {
-		
+	private static void encryptSnapshot() {
+
+		try {
+
+			List<String> snapshot = new LinkedList<String>();
+			snapshot.add("lala");
+			snapshot.add("zeze");
+
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			ObjectOutputStream snapStream = new ObjectOutputStream(out);
+
+			snapStream.writeObject(snapshot);
+			byte[] snapshotBytes = out.toByteArray();
+
+			//TODO HMAC
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS7Padding", "BC");
+            System.out.println(key.getEncoded().length);
+			cipher.init(Cipher.ENCRYPT_MODE, key);
+			byte encryptedSnapBytes[] = cipher.doFinal(snapshotBytes);
+			
+			w.writeInt(encryptedSnapBytes.length);
+			w.write(encryptedSnapBytes);
+
+		} catch (IOException | IllegalBlockSizeException | BadPaddingException | NoSuchAlgorithmException | 
+				NoSuchProviderException | NoSuchPaddingException | InvalidKeyException e) {
+			e.printStackTrace();
+		}
+
+	}
+
+
+	private static void sign() {
+
 		try {
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			ObjectOutputStream signStream = new ObjectOutputStream(out);
 			signStream.writeInt(nonceC + 1);			
-			signStream.writeObject(bPub);	
-			
-			byte[] plaintext = out.toByteArray();
-			
+			signStream.writeObject(bPubNumber);	
+			byte[] msg = out.toByteArray();
+
 			KeyPair keypair = KeyManager.getKeyPair("keypair", "srscsrsc", "GOSTPMKeyStore.jks", "srscsrsc");
-			
-			
-			
-		} catch (IOException e) {
+			Signature signature = Signature.getInstance("SHA256withRSA", "BC"); //TODO 512 doesnt work because AES max key size is 256
+			signature.initSign(keypair.getPrivate());
+
+
+			signature.update(msg);
+			byte[] signBytes = signature.sign();
+
+			w.writeInt(nonceC + 1);
+			w.writeObject(bPubNumber);
+			w.writeInt(signBytes.length);
+			w.write(signBytes);
+
+
+		} catch (IOException | InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException e) {
 			e.printStackTrace();
 		}			
 	}
@@ -206,29 +246,20 @@ public class GOSTPMServer {
 
 			KeyAgreement bKeyAgree = KeyAgreement.getInstance("DH", "BC");
 			KeyPair      bPair = keyGen.generateKeyPair();
-			bPub = bPair.getPublic();
+			bPubNumber = bPair.getPublic();
 
 			bKeyAgree.init(bPair.getPrivate());
-			bKeyAgree.doPhase(aPub, true);
+			bKeyAgree.doPhase(aPubNumber, true);
 			MessageDigest hash = MessageDigest.getInstance("SHA1", "BC");
 
 			byte[] keyBytes = hash.digest(bKeyAgree.generateSecret());
 			key = new SecretKeySpec(keyBytes, "AES");
-
-			//System.out.println(Utils.toHex(key.getEncoded()));
 
 		} catch (NoSuchAlgorithmException | NoSuchProviderException | InvalidAlgorithmParameterException | InvalidKeyException e) {
 			e.printStackTrace();
 		} 
 
 	}
-
-
-
-
-	//	ATTESTATION SIGNATURE: é uma assinatura digital cobrindo:
-	//		• Um número público Diffie-Hellman gerado pelo módulo em causa para a resposta
-	//		• A resposta o NONCE do cliente (exemplo, NONCE+1)
 
 
 	private static void printSocketInfo(SSLSocket s) {

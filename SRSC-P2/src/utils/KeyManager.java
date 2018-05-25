@@ -8,8 +8,11 @@ import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStore.PasswordProtection;
 import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.UnrecoverableEntryException;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.util.*;
 import javax.crypto.*;
@@ -68,20 +71,21 @@ public class KeyManager {
 	public static KeyPair getKeyPair(String entryName, String keyMasterPwd, String keyStoreFile, String keyStorePwd) {
 
 		PublicKey publicKey = null;
-		Key key = getKey(entryName, keyMasterPwd, keyStoreFile, keyStorePwd);
+		Key key = null;
 		try {
+
+			KeyStore keystore = getOrCreateKeyStore(keyStoreFile, keyStorePwd);
+			key = keystore.getKey(entryName, keyMasterPwd.toCharArray());
 			if (key instanceof PrivateKey) {
-				Certificate cert;
-				cert = getOrCreateKeyStore(keyStoreFile, keyStorePwd).getCertificate(entryName);
+				Certificate cert = keystore.getCertificate(entryName);
 				// Get now public key
 				publicKey = cert.getPublicKey();
 			}
-
-		} catch (KeyStoreException e) {
+		} catch (KeyStoreException | UnrecoverableKeyException | NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
 
-		return new KeyPair(publicKey, (PrivateKey)key);
+		return new KeyPair(publicKey, (PrivateKey) key);
 	}
 
 
