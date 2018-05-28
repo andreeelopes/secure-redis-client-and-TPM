@@ -20,8 +20,7 @@ import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.SignatureException;
-import java.util.LinkedList;
-import java.util.List;
+
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -40,7 +39,6 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import utils.KeyManager;
 import utils.MyCache;
-import utils.Utils;
 
 public abstract class TPMServer {
 

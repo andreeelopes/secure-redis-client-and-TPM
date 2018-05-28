@@ -21,8 +21,7 @@ import java.security.Signature;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
+
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -36,9 +35,9 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import utils.FileHelper;
 import utils.KeyManager;
 import utils.MyCache;
-import utils.Utils;
 
 public class TPMClient {
 
@@ -59,6 +58,10 @@ public class TPMClient {
 
 	private SSLSocket c;
 
+	private static final String GOS_SNAPSHOT_FILE_PATH = "gosSnapshot";
+	private static final String VMS_SNAPSHOT_FILE_PATH = "vmsSnapshot";
+
+
 	private BigInteger g512 = new BigInteger(
 			"153d5d6172adb43045b68ae8e1de1070b6137005686d29d3d73a7"
 					+ "749199681ee5b212c9b96bfdcfa5b20cd5e3fd2044895d609cf9b"
@@ -70,12 +73,12 @@ public class TPMClient {
 					+ "f0573bf047a3aca98cdf3b", 16);
 
 
-	
+
 
 	public TPMClient() {
 		cache = new MyCache();
-		oldSnapshotGOSTPM = null;
-		oldSnapshotVMSTPM = null;
+		oldSnapshotGOSTPM = FileHelper.ToBytes(GOS_SNAPSHOT_FILE_PATH);
+		oldSnapshotVMSTPM = FileHelper.ToBytes(VMS_SNAPSHOT_FILE_PATH);
 	}
 
 
@@ -83,12 +86,12 @@ public class TPMClient {
 
 		byte[] snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM);
 		byte[] snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM);
-		
-		return attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM) && 
-				attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM); 
+
+		return attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM, GOS_SNAPSHOT_FILE_PATH) && 
+				attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM, VMS_SNAPSHOT_FILE_PATH); 
 	}
 
-	private boolean attestTPM(byte[] snapshot, byte[] oldSnapshot) {
+	private boolean attestTPM(byte[] snapshot, byte[] oldSnapshot, String pathName ) {
 
 
 		if(snapshot == null)
@@ -96,10 +99,12 @@ public class TPMClient {
 
 		if(oldSnapshot == null) {//first time attesting
 			oldSnapshot = snapshot;
+			FileHelper.ToFile(oldSnapshot, pathName);//update file
+
 			return true;
 		}
-
-		return Arrays.equals(snapshot, snapshot);
+		
+		return Arrays.equals(oldSnapshot, snapshot);
 	}
 
 	private byte[] getSnapshot(String ip, int port) {
