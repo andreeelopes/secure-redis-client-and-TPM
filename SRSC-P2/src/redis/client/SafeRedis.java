@@ -5,9 +5,12 @@ import java.io.UnsupportedEncodingException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
+import java.security.Signature;
+import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -36,16 +39,16 @@ public class SafeRedis {
 	private Jedis jedis ;
 	private CipherConfig config;
 	private Key cipherKey;
-
+	KeyPair kp;
 	private static final String keyCipherName = "redis_cipherkey";
 	private static final String keyMacName = "redis_mackey";
 	private Mac mac;
 	private IvParameterSpec ivParameterSpec;
 	private Cipher cipher;
+	Signature signature;
 	public SafeRedis() {
-
 		jedis = new Jedis("172.17.0.2", 6379, 10000, false);
-		//jedis.flushAll();
+		jedis.flushAll();
 		jedis.connect();
 		config = XMLParser.getClientconfig();
 		cipherKey = KeyManager.getOrCreateKey(keyCipherName, config.getCipherAlg(), config.getCipherProvider(), 
@@ -54,26 +57,26 @@ public class SafeRedis {
 				config.getMacKeySize(), "srsc", "mykeystore.jceks", "srsc");
 		String encoded=config.getIv();
 		byte[] iv = Base64.getDecoder().decode(encoded);
-
+		kp=KeyManager.getKeyPair("DBcert", "srsc1718", "DBcert.jks", "srsc1718");
 		ivParameterSpec = new IvParameterSpec(iv);
-		 try {
-
-				mac = Mac.getInstance(config.getMacAlgorithm());
-				mac.init(macKey);
+		try {
+			signature = Signature.getInstance("SHA512withRSA", "BC");
+			mac = Mac.getInstance(config.getMacAlgorithm());
+			mac.init(macKey);
 			cipher = Cipher.getInstance(config.getCipherSuite(), config.getCipherProvider());
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			mac=null;
 		}
-		 
+
 	}	
-	
+
 	public List<Map<String, String>> get(String field, String value) {
-		
+
 		try {
 			byte[] valueByteArray = value.getBytes("ISO-8859-1");
-
+			boolean valid;
 			byte[] hmacValue = mac.doFinal(valueByteArray);
 			Set<String> keys = jedis.smembers(field + ":" + new String(hmacValue, "ISO-8859-1"));
 			List<Map<String,String>> result = new ArrayList<Map<String,String>>(keys.size());
@@ -81,14 +84,23 @@ public class SafeRedis {
 			for (int i = 0; it.hasNext(); i++) {
 				Map<String,String> list = new HashMap<String,String>();
 				String mainKey=it.next();
+				valid=true;
 				Map<String, String> fields = jedis.hgetAll(mainKey);
 				for (String key : fields.keySet()) {
-					byte[] encoded = fields.get(key).getBytes("ISO-8859-1");
-					cipher.init(cipher.DECRYPT_MODE, cipherKey, ivParameterSpec);
-					byte[] pArray = cipher.doFinal(encoded);
-					list.put(key, new String(pArray, "ISO-8859-1"));
+					if(key.equals("Sign")) {
+						if(!this.checkSign(mainKey, fields.get(key))) {
+							valid=false;
+							break;
+						}
+					}
+					else {
+						byte[] encoded = fields.get(key).getBytes("ISO-8859-1");
+						cipher.init(cipher.DECRYPT_MODE, cipherKey, ivParameterSpec);
+						byte[] pArray = cipher.doFinal(encoded);
+						list.put(key, new String(pArray, "ISO-8859-1"));
+					}
 				}
-				if(!this.checkIfisValid(mainKey,list))
+				if(!this.checkIfisValid(mainKey,list)|| !valid)
 					this.remove(list.get("Key"));
 				else {
 					result.add(list);
@@ -102,24 +114,24 @@ public class SafeRedis {
 		}
 		return null;
 	}
-	
+
 	private boolean checkIfisValid(String mainKey, Map<String, String> map) {
 		try {
-		String[] hashValues=mainKey.split(" ");
+			String[] hashValues=mainKey.split(" ");
 
-		byte[] tempbuffer;
-		String checkString;
+			byte[] tempbuffer;
+			String checkString;
 
-		for(int i=0;i<hashValues.length;i++) {
-			String[] hashValue=hashValues[i].split(":");
-			Pair p=new Pair(hashValue[0],hashValue[1]);
+			for(int i=0;i<hashValues.length;i++) {
+				String[] hashValue=hashValues[i].split(":");
+				Pair p=new Pair(hashValue[0],hashValue[1]);
 
-			tempbuffer=map.get(p.getKey()).getBytes("ISO-8859-1");
-			tempbuffer=mac.doFinal(tempbuffer);
-			checkString=new String(tempbuffer,"ISO-8859-1");
-			if(!checkString.equals(p.getValue())) return false;
-		}
-		return true;
+				tempbuffer=map.get(p.getKey()).getBytes("ISO-8859-1");
+				tempbuffer=mac.doFinal(tempbuffer);
+				checkString=new String(tempbuffer,"ISO-8859-1");
+				if(!checkString.equals(p.getValue())) return false;
+			}
+			return true;
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -130,10 +142,10 @@ public class SafeRedis {
 	public String makeHash(String field,String value)
 	{
 		try {
-		byte[] valueByteArray = value.getBytes("ISO-8859-1");
+			byte[] valueByteArray = value.getBytes("ISO-8859-1");
 
-		byte[] hmacValue = mac.doFinal(valueByteArray);
-	
+			byte[] hmacValue = mac.doFinal(valueByteArray);
+
 			return (field + ":" + new String(hmacValue, "ISO-8859-1"));
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -144,16 +156,16 @@ public class SafeRedis {
 	}
 	public void set(String key, String field, String value) {
 		try {
-			
-			
+
+
 			byte[] valueByteArray = value.getBytes("ISO-8859-1");
-			
-			
+
+
 			cipher.init(cipher.ENCRYPT_MODE, cipherKey, ivParameterSpec);
 			byte[] cipherValue = cipher.doFinal(valueByteArray);
 
 			String cipherStringValue = new String(cipherValue, "ISO-8859-1");
-			
+
 			//	byte[] encoded = cipherStringValue.getBytes("ISO-8859-1");
 
 			jedis.hset(key, field, cipherStringValue);
@@ -163,7 +175,7 @@ public class SafeRedis {
 			//as keys que tenham a marca adidas
 
 			byte[] hmacValue = mac.doFinal(valueByteArray);
-			
+
 			jedis.sadd(field + ":" + new String(hmacValue, "ISO-8859-1"), key);
 
 
@@ -203,16 +215,45 @@ public class SafeRedis {
 		try {
 			valueByteArray = key.getBytes("ISO-8859-1");
 
-		byte[] hmacValue = mac.doFinal(valueByteArray);
-		String skey="Key" + ":" + new String(hmacValue, "ISO-8859-1");
-		Set<String> keys = jedis.smembers(skey);
-		if(keys.size()>0) {
-			this.remove(key);
-			jedis.spop(skey);
-		}
+			byte[] hmacValue = mac.doFinal(valueByteArray);
+			String skey="Key" + ":" + new String(hmacValue, "ISO-8859-1");
+			Set<String> keys = jedis.smembers(skey);
+			if(keys.size()>0) {
+				this.remove(key);
+				jedis.spop(skey);
+			}
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+	}
+	public void makeSign(String key) {
+		try {
+		signature.initSign(kp.getPrivate());
+		byte[] keybyte= key.getBytes("ISO-8859-1");
+		signature.update(keybyte);
+		byte[]  sigBytes = signature.sign();
+		jedis.hset(key, "Sign",  new String(sigBytes, "ISO-8859-1"));
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	public boolean checkSign(String key,String sign) throws Exception {
+
+		byte[] keybyte= key.getBytes("ISO-8859-1");
+
+		signature.initVerify(kp.getPublic());
+		signature.update(keybyte);
+
+
+		if (signature.verify(sign.getBytes("ISO-8859-1")))
+		{
+			return true;
+		}
+		else
+		{
+			return false;
 		}
 	}
 }
