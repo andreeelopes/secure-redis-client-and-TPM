@@ -42,8 +42,8 @@ import utils.Utils;
 
 public class TPMClient {
 
-	private List<String> oldSnapshotGOSTPM;
-	private List<String> oldSnapshotVMSTPM;
+	private byte[] oldSnapshotGOSTPM;
+	private byte[] oldSnapshotVMSTPM;
 
 	private MyCache cache;
 	private final int TIMETOEXPIRE = 10000;
@@ -70,54 +70,41 @@ public class TPMClient {
 					+ "f0573bf047a3aca98cdf3b", 16);
 
 
+	
+
 	public TPMClient() {
 		cache = new MyCache();
-		oldSnapshotGOSTPM = new LinkedList<String>();
-		oldSnapshotVMSTPM = new LinkedList<String>();
+		oldSnapshotGOSTPM = null;
+		oldSnapshotVMSTPM = null;
 	}
 
-	volatile List<String> snapshotGOSTPM = null;
-	volatile List<String> snapshotVMSTPM = null;
 
 	public boolean attest(String ipGOSTPM, int portGOSTPM, String ipVMSTPM, int portVMSTPM) {
 
-		//List<String> snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM);
-		//List<String> snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM);
-
-		Thread GOSTPMThread = new Thread(() -> getSnapshot(ipGOSTPM, portGOSTPM));
-		//Thread VMSTPMThread = new Thread(() -> snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM));
-
-		try {
-			GOSTPMThread.join();
-			//VMSTPMThread.join();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-
-		return attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM); //&& attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM); 
+		byte[] snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM);
+		byte[] snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM);
+		
+		return attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM) && 
+				attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM); 
 	}
 
-	private boolean attestTPM(List<String> snapshotGOSTPM, List<String> oldSnapshotTPM) {
+	private boolean attestTPM(byte[] snapshot, byte[] oldSnapshot) {
 
-		if(snapshotGOSTPM == null)
+
+		if(snapshot == null)
 			return false;
 
-		if(oldSnapshotGOSTPM.isEmpty()) {
-			oldSnapshotGOSTPM = snapshotGOSTPM;
+		if(oldSnapshot == null) {//first time attesting
+			oldSnapshot = snapshot;
 			return true;
 		}
 
-		for (String string : snapshotGOSTPM) {
-			if(!oldSnapshotGOSTPM.contains(string) )
-				return false;
-		}
-
-		return true;
+		return Arrays.equals(snapshot, snapshot);
 	}
 
-	private List<String> getSnapshot(String ip, int port) {
+	private byte[] getSnapshot(String ip, int port) {
 
-		List<String> snapshot = null;
+		byte[] snapshot = null;
 
 		try {
 
@@ -136,11 +123,9 @@ public class TPMClient {
 			w.close();
 			c.close();
 		} catch (IOException e) {
-			System.err.println(e.toString());
+			e.printStackTrace();
 		}
 
-		System.out.println(snapshot.get(0));
-		
 		return snapshot;
 	}
 
@@ -165,9 +150,9 @@ public class TPMClient {
 		} 
 	}
 
-	private List<String> receiveSnapshotDH() {
+	private byte[] receiveSnapshotDH() {
 
-		List<String> snapshot = null;
+		byte[] snapshot = null;
 		try {
 			r = new ObjectInputStream(c.getInputStream());
 
@@ -221,10 +206,9 @@ public class TPMClient {
 		return snapshot;
 	}
 
-	@SuppressWarnings("unchecked")
-	private List<String> decryptSnapshot(byte[] encryptedSnapBytes) {
+	private byte[] decryptSnapshot(byte[] encryptedSnapBytes) {
 
-		List<String> snapshot = null;
+		byte[] snapshot = null;
 		try {
 
 			byte[]	ivBytes = 
@@ -239,7 +223,7 @@ public class TPMClient {
 			ByteArrayInputStream in = new ByteArrayInputStream(text);
 			ObjectInputStream snapStream = new ObjectInputStream(in);
 
-			snapshot = (List<String>) snapStream.readObject();
+			snapshot = (byte[]) snapStream.readObject();
 
 		} catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | IllegalBlockSizeException |
 				BadPaddingException | InvalidKeyException | IOException | ClassNotFoundException | InvalidAlgorithmParameterException e) {

@@ -165,7 +165,26 @@ public class Utils {
 		return hexString.toString().toUpperCase();
 	}
 
-
+	/**
+     * Converte a string passada num array de bytes
+     * a partir dos 8 bits de cada caracter contido no array
+     * 
+     * @param string - String a converter
+     * @return - retorna representacao em array de bytes 
+     */
+    public static byte[] toByteArray(
+        String string)
+    {
+        byte[]	bytes = new byte[string.length()];
+        char[]  chars = string.toCharArray();
+        
+        for (int i = 0; i != chars.length; i++)
+        {
+            bytes[i] = (byte)chars[i];
+        }
+        
+        return bytes;
+    }
 
 }
 

@@ -1,8 +1,10 @@
 package TPM.server;
 
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigInteger;
@@ -40,44 +42,40 @@ import utils.KeyManager;
 import utils.MyCache;
 import utils.Utils;
 
-public class TPMServer {
+public abstract class TPMServer {
 
-	private static MyCache cache;
-	private static final int TIMETOEXPIRE = 10000;
+	private MyCache cache;
+	private final int TIMETOEXPIRE = 10000;
 
-	private static PublicKey aPubNumber;
-	private static int nonceC;
-	private static SSLSocket c;
+	private PublicKey aPubNumber;
+	private int nonceC;
+	private SSLSocket c;
+	private SSLServerSocket s;
 
-
-	private static BigInteger g512 = new BigInteger(
+	private BigInteger g512 = new BigInteger(
 			"153d5d6172adb43045b68ae8e1de1070b6137005686d29d3d73a7"
 					+ "749199681ee5b212c9b96bfdcfa5b20cd5e3fd2044895d609cf9b"
 					+ "410b7a0f12ca1cb9a428cc", 16);
 
-	private static BigInteger p512 = new BigInteger(
+	private BigInteger p512 = new BigInteger(
 			"9494fec095f3b85ee286542b3836fc81a5dd0a0349b4c239dd387"
 					+ "44d488cf8e31db8bcb7d33b41abb9e5a33cca9144b1cef332c94b"
 					+ "f0573bf047a3aca98cdf3b", 16);
 
-	private static PublicKey bPubNumber;
+	private PublicKey bPubNumber;
 
-	private static SecretKey key;
+	private SecretKey key;
 
-	private static ObjectOutputStream w;
-	private static byte[] encryptedSnapBytes;
-
-	public static void main(String[] args) {
-
-		//		String ksName = args[0];    // serverkeystore
-		//		char[]  ksPass = args[1].toCharArray();   // password da keystore
-		//		char[]  ctPass = args[2].toCharArray();  // password entry
-		//		int port= Integer.parseInt(args[3]);
+	private ObjectOutputStream w;
+	private byte[] encryptedSnapBytes;
 
 
+	public TPMServer(int port) {
 		cache = new MyCache();
+		s  = establishSecureConnection(port);
+	}
 
-		SSLServerSocket s  = establishSecureConnection(4443);
+	public void initiateAttestationProtocol() {
 
 		while(true) {
 			try {
@@ -97,7 +95,7 @@ public class TPMServer {
 	}
 
 
-	private static SSLServerSocket establishSecureConnection(int port) {
+	private SSLServerSocket establishSecureConnection(int port) {
 
 		String[] confciphersuites={"TLS_RSA_WITH_AES_256_CBC_SHA256"};
 		String[] confprotocols={"TLSv1.2"};
@@ -127,7 +125,7 @@ public class TPMServer {
 		return s;
 	}
 
-	private static boolean receiveSnapRequestDH() {
+	private boolean receiveSnapRequestDH() {
 		try {
 
 			ObjectInputStream r = new ObjectInputStream(c.getInputStream());			
@@ -150,7 +148,7 @@ public class TPMServer {
 
 	}
 
-	private static void sendSnapshotDH() {
+	private void sendSnapshotDH() {
 		try {
 
 			w = new ObjectOutputStream(c.getOutputStream());			
@@ -168,17 +166,13 @@ public class TPMServer {
 	}
 
 
-	private static List<String> snapshot() {
-		return null;
-	}
+	abstract byte[] getSnapshot();
 
-	private static void encryptSnapshot() {
+	private void encryptSnapshot() {
 
 		try {
 
-			List<String> snapshot = new LinkedList<String>();
-			snapshot.add("lala");
-			snapshot.add("zeze");
+			byte[] snapshot = getSnapshot();
 
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			ObjectOutputStream snapStream = new ObjectOutputStream(out);
@@ -204,8 +198,7 @@ public class TPMServer {
 
 	}
 
-
-	private static void signAndSend() {
+	private void signAndSend() {
 
 		try {
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -242,7 +235,7 @@ public class TPMServer {
 		}			
 	}
 
-	private static void generateKeyDH() {
+	private void generateKeyDH() {
 
 		DHParameterSpec dhParams = new DHParameterSpec(p512, g512);
 
@@ -267,9 +260,43 @@ public class TPMServer {
 		} 
 
 	}
+	
+	
+	/**
+	 * 
+	 * @param command - the shell command to be executed
+	 * @param filterColumns - the index of the columns that you want to output
+	 * @return a string with the output
+	 * @throws Exception
+	 */
+	protected static String executeShellCommand(String command, int[] filterColumns) throws Exception {
+
+		Process process = Runtime.getRuntime().exec(command);
+
+		BufferedReader r = 
+				new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+		String output = "";
+		String line = "";	
+		String [] splitedRes;
+		while ((line = r.readLine()) != null) {
+			line = line.replaceAll("\\s+", " ");//regex to remove whitespace duplicates
+			line = line.trim();
+			splitedRes = line.split(" ");
+			if(filterColumns != null)//if has filter on columns
+				for (int column : filterColumns) {
+					output += splitedRes[column];
+				}
+			else//if no filters on columns
+				output += line;
+		}
+
+		System.out.println("Output from " + command + " : " + output + "\n");
+		return output;
+	}
 
 
-	private static void printSocketInfo(SSLSocket s) {
+	private void printSocketInfo(SSLSocket s) {
 		System.out.println("Socket class: "+s.getClass());
 		System.out.println("   Remote address = "
 				+s.getInetAddress().toString());
@@ -285,7 +312,7 @@ public class TPMServer {
 		System.out.println("   Protocol = "+ss.getProtocol());
 	}
 
-	private static void printServerSocketInfo(SSLServerSocket s) {
+	private void printServerSocketInfo(SSLServerSocket s) {
 		System.out.println("Server socket class: "+s.getClass());
 		System.out.println("   Socker address = "
 				+s.getInetAddress().toString());
