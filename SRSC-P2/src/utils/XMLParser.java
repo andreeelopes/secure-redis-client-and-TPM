@@ -7,13 +7,12 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+
 
 public class XMLParser {
 
-
-	public static CipherConfig getClientconfig() {
+	
+	public static CipherConfig getClientconfig(String pathToConfigFile) {
 
 		String cipherSuite = null;
 		String macAlgorithm = null;
@@ -22,8 +21,9 @@ public class XMLParser {
 		String iv = null;
 		int cipherKeySize = 0;
 		int macKeySize = 0;
+		
 		try {
-			File fXmlFile = new File("redisClientConfig.xml");
+			File fXmlFile = new File(pathToConfigFile);
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 			Document doc = dBuilder.parse(fXmlFile);

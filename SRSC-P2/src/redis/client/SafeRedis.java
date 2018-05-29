@@ -1,47 +1,36 @@
 package redis.client;
 
 
-import java.io.UnsupportedEncodingException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.SecureRandom;
 import java.security.Signature;
-import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.Mac;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
-
 import redis.clients.jedis.Jedis;
 import utils.CipherConfig;
 import utils.KeyManager;
 import utils.Pair;
-import utils.Utils;
 import utils.XMLParser;
 
 public class SafeRedis {
+	
+	
+	private static final String PATH_TO_CONFIG_FILE = "redisClientConfig.xml";
+	private static final String keyCipherName = "redis_cipherkey";
+	private static final String keyMacName = "redis_mackey";
+	
 	private Jedis jedis ;
 	private CipherConfig config;
 	private Key cipherKey;
 	KeyPair kp;
-	private static final String keyCipherName = "redis_cipherkey";
-	private static final String keyMacName = "redis_mackey";
 	private Mac mac;
 	private IvParameterSpec ivParameterSpec;
 	private Cipher cipher;
@@ -50,7 +39,7 @@ public class SafeRedis {
 		jedis = new Jedis("172.17.0.2", 6379, 10000, false);
 		jedis.flushAll();
 		jedis.connect();
-		config = XMLParser.getClientconfig();
+		config = XMLParser.getClientconfig(PATH_TO_CONFIG_FILE);
 		cipherKey = KeyManager.getOrCreateKey(keyCipherName, config.getCipherAlg(), config.getCipherProvider(), 
 				config.getCipherKeySize(), "srsc", "mykeystore.jceks", "srsc");
 		Key macKey = KeyManager.getOrCreateKey(keyMacName, config.getMacAlgorithm(), config.getCipherProvider(), 

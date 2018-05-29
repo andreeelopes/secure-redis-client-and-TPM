@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+	<cipherSuite >AES/CBC/PKCS5Padding</cipherSuite>
+	<cipherKeySize>256</cipherKeySize>
+	<cipherProvider>SunJCE</cipherProvider>
+	<iv>uusfDRYvid0wlIP/EkVZaA==</iv>
+	<macAlgorithm >*</macAlgorithm>
+	<macProvider >*</macProvider>
+	<macKeySize>*</macKeySize>
+</config>
