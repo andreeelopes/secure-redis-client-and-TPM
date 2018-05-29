@@ -5,7 +5,8 @@ import java.net.UnknownHostException;
 import java.util.Calendar;
 
 import TPM.client.TPMClient;
-import redis.clients.jedis.Jedis;
+import redis.client.RedisClient;
+
 
 public class GetSetBenchmark {
 	private static final int TOTAL_OPERATIONS = 100;
@@ -15,37 +16,37 @@ public class GetSetBenchmark {
 		long begin = Calendar.getInstance().getTimeInMillis();
 
 		//if attestion ok do benchmark
-		//if(	new TPMClient().attest("localhost", 4446, "localhost", 4443,
-			//	"TPMClientTrustStore", "srscsrsc", "gostpmservercert", "vmstpmservercert")) {
+		if(	new TPMClient().attest("localhost", 4446, "localhost", 4443,
+				"TPMClientTrustStore", "srscsrsc", "gostpmservercert", "vmstpmservercert")) {
 
 			//Jedis jedis = new Jedis("rediss://localhost", 6379);
-			Jedis jedis = new Jedis("172.17.0.2", 6379);
+			RedisClient jedis = new RedisClient();
 
 			//jedis.connect();
-			jedis.flushAll();
+		
 
 
 			for (int n = 0; n <= TOTAL_OPERATIONS; n++) {
-				String key = "foo" + n;
-				jedis.set(key, "bar" + n);
+
+				jedis.setClient(n,"test", "test", "test", "test", "test");
 				// System.out.println(jedis.get(key));
 			}
 			for (int n = 0; n <= TOTAL_OPERATIONS; n++) {
-				String key = "foo" + n;
-				jedis.get(key);
+
+				jedis.getClientID("n");
 				//System.out.println(jedis.get(key));
 			}
 
 			long elapsed = Calendar.getInstance().getTimeInMillis() - begin;
 
-			jedis.disconnect();
+		
 
 			System.out.println(((1000 * 2 * TOTAL_OPERATIONS) / elapsed) + " ops/s");	
 		}
 
 
 	}
-//}
+}
 
 
 

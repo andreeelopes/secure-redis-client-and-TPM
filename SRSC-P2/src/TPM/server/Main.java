@@ -38,7 +38,7 @@ public class Main {
 
 
 		new GOSTPMServer(4446, "GOSTPMKeyStore.jks", "srscsrsc", "srscsrsc", "goskeypair", "GOSTPMConfig.xml");
-		//new VMSTPMServer(4443, "VMSTPMKeyStore.jks", "srscsrsc", "srscsrsc", "vmskeypair", "VMSTPMConfig.xml");
+		new VMSTPMServer(4443, "VMSTPMKeyStore.jks", "srscsrsc", "srscsrsc", "vmskeypair", "VMSTPMConfig.xml");
 
 	}
 
