@@ -46,16 +46,27 @@ import utils.XMLParser;
 
 public abstract class TPMServer {
 	
+	private static final char ATTESTATION_REQUEST_CODE = '0';
+	private static final char ATTESTATION_RESPONSE_CODE = '1';
+	
 	private MyCache cache;
-	private final int TIMETOEXPIRE = 10000;
+	private static final int TIME_TO_EXPIRE = 10000;
 
-	private PublicKey aPubNumber;
-	private int nonceC;
 	private SSLSocket c;
 	private SSLServerSocket s;
 
 	private String pathToKeyStore;
 
+	private CipherConfig symEncrypConfig;
+	private SecretKey key;
+	private PublicKey bPubNumber;
+	private PublicKey aPubNumber;
+	private int nonceC;
+
+	private ObjectOutputStream w;
+	private byte[] encryptedSnapBytes;
+
+	
 	private BigInteger g512 = new BigInteger(
 			"153d5d6172adb43045b68ae8e1de1070b6137005686d29d3d73a7"
 					+ "749199681ee5b212c9b96bfdcfa5b20cd5e3fd2044895d609cf9b"
@@ -65,17 +76,8 @@ public abstract class TPMServer {
 			"9494fec095f3b85ee286542b3836fc81a5dd0a0349b4c239dd387"
 					+ "44d488cf8e31db8bcb7d33b41abb9e5a33cca9144b1cef332c94b"
 					+ "f0573bf047a3aca98cdf3b", 16);
-
-	private PublicKey bPubNumber;
-
-	private SecretKey key;
-
-	private ObjectOutputStream w;
-	private byte[] encryptedSnapBytes;
-
 	
-	private CipherConfig symEncrypConfig;
-
+	
 	public TPMServer(int port, String pathToKeyStore, String keyStorePwd, String pathToConfigFile) {
 		cache = new MyCache();
 		this.pathToKeyStore = pathToKeyStore;
@@ -143,10 +145,10 @@ public abstract class TPMServer {
 			char attestRequestCode = r.readChar();
 			nonceC = r.readInt();
 
-			if(attestRequestCode != '0' || !cache.isValid( nonceC) ) 
+			if(attestRequestCode != ATTESTATION_REQUEST_CODE || !cache.isValid( nonceC) ) 
 				return false;
 
-			cache.add( nonceC, TIMETOEXPIRE);			
+			cache.add( nonceC, TIME_TO_EXPIRE);			
 			aPubNumber = (PublicKey) r.readObject();
 
 
@@ -165,7 +167,7 @@ public abstract class TPMServer {
 			w = new ObjectOutputStream(c.getOutputStream());			
 
 			generateKeyDH();
-			w.writeChar('1');
+			w.writeChar(ATTESTATION_RESPONSE_CODE);
 			encryptSnapshot();
 			signAndSend(keyStorePwd, entryPwd, keyEntryName);
 			w.flush();

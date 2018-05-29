@@ -64,7 +64,9 @@ public class TPMClient {
 
 	private static final String GOS_SNAPSHOT_FILE_PATH = "gosSnapshot";
 	private static final String VMS_SNAPSHOT_FILE_PATH = "vmsSnapshot";
-
+	private static final char ATTESTATION_REQUEST_CODE = '0';
+	private static final char ATTESTATION_RESPONSE_CODE = '1';
+	
 
 	private BigInteger g512 = new BigInteger(
 			"153d5d6172adb43045b68ae8e1de1070b6137005686d29d3d73a7"
@@ -149,7 +151,7 @@ public class TPMClient {
 
 			w = new ObjectOutputStream(c.getOutputStream());
 
-			w.writeChar('0');
+			w.writeChar(ATTESTATION_REQUEST_CODE);
 			w.writeInt( nonceC = new SecureRandom().nextInt());
 			w.writeObject(aPair.getPublic());
 
@@ -169,7 +171,7 @@ public class TPMClient {
 			char attestRequestCode = r.readChar();
 			int nonceS = r.readInt();
 
-			if(attestRequestCode != '1' || nonceS != nonceC + 1 || !cache.isValid( nonceS ) ) 
+			if(attestRequestCode != ATTESTATION_RESPONSE_CODE || nonceS != nonceC + 1 || !cache.isValid( nonceS ) ) 
 				return null;
 
 			cache.add( nonceS, TIMETOEXPIRE);
