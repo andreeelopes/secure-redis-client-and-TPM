@@ -37,12 +37,15 @@ import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
+
+import utils.CipherConfig;
 import utils.KeyManager;
 import utils.MyCache;
 import utils.Utils;
+import utils.XMLParser;
 
 public abstract class TPMServer {
-
+	
 	private MyCache cache;
 	private final int TIMETOEXPIRE = 10000;
 
@@ -70,11 +73,16 @@ public abstract class TPMServer {
 	private ObjectOutputStream w;
 	private byte[] encryptedSnapBytes;
 
+	
+	private CipherConfig symEncrypConfig;
 
-	public TPMServer(int port, String pathToKeyStore, String keyStorePwd) {
+	public TPMServer(int port, String pathToKeyStore, String keyStorePwd, String pathToConfigFile) {
 		cache = new MyCache();
 		this.pathToKeyStore = pathToKeyStore;
-		s  = establishSecureConnection(port, keyStorePwd);
+		symEncrypConfig = XMLParser.getClientconfig(pathToConfigFile);
+
+		s = establishSecureConnection(port, keyStorePwd);
+
 	}
 
 	protected void initiateAttestationProtocol(String keyStorePwd, String entryPwd, String keyEntryName) {
@@ -188,10 +196,11 @@ public abstract class TPMServer {
 			}; 
 
 
-			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS7Padding", "BC");
+			
+			
+			Cipher cipher = Cipher.getInstance(symEncrypConfig.getCipherAlg(), symEncrypConfig.getCipherProvider());
 			cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(ivBytes));
 			encryptedSnapBytes = cipher.doFinal(snapshotBytes);
-
 
 		} catch (IOException | IllegalBlockSizeException | BadPaddingException | NoSuchAlgorithmException | 
 				NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException e) {
@@ -210,6 +219,7 @@ public abstract class TPMServer {
 			signStream.writeObject(bPubNumber);	
 			signStream.writeInt(encryptedSnapBytes.length);
 			signStream.write(encryptedSnapBytes);
+			signStream.writeObject(symEncrypConfig);
 			byte[] msg = out.toByteArray();
 
 			KeyPair keypair = KeyManager.getKeyPair(keyEntryName, entryPwd, pathToKeyStore, keyStorePwd);
@@ -228,7 +238,8 @@ public abstract class TPMServer {
 			w.write(encryptedSnapBytes);
 			w.writeInt(signBytes.length);
 			w.write(signBytes);
-
+			w.writeObject(symEncrypConfig);
+			
 			System.out.println("---------------");
 			System.out.println();
 			System.out.println(nonceC + 1);

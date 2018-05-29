@@ -36,6 +36,7 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.rmi.CORBA.Util;
 
+import utils.CipherConfig;
 import utils.FileHelper;
 import utils.KeyManager;
 import utils.MyCache;
@@ -51,6 +52,7 @@ public class TPMClient {
 
 	private int nonceC;
 
+	private CipherConfig symEncrypConfig;
 	private KeyPair aPair;
 	private SecretKeySpec key;
 	private PublicKey bPubNumber;
@@ -76,7 +78,6 @@ public class TPMClient {
 
 
 
-
 	public TPMClient() {
 		cache = new MyCache();
 		oldSnapshotGOSTPM = FileHelper.ToBytes(GOS_SNAPSHOT_FILE_PATH);
@@ -88,10 +89,10 @@ public class TPMClient {
 			String pathtoTrustStore, String trustStorePwd,
 			String gosCertName, String vmsCertName) {
 
-		byte[] snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM, pathtoTrustStore, trustStorePwd, gosCertName);
+		//byte[] snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM, pathtoTrustStore, trustStorePwd, gosCertName);
 		byte[] snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM, pathtoTrustStore, trustStorePwd, vmsCertName);
 
-		return attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM, GOS_SNAPSHOT_FILE_PATH) && 
+		return //attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM, GOS_SNAPSHOT_FILE_PATH) && 
 				attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM, VMS_SNAPSHOT_FILE_PATH); 
 	}
 
@@ -180,6 +181,8 @@ public class TPMClient {
 
 			byte [] signBytes = new byte[r.readInt()];
 			r.read(signBytes);
+			symEncrypConfig = (CipherConfig) r.readObject();
+
 
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			ObjectOutputStream signStream = new ObjectOutputStream(out);
@@ -187,6 +190,8 @@ public class TPMClient {
 			signStream.writeObject(bPubNumber);	
 			signStream.writeInt(encryptedSnapBytes.length);
 			signStream.write(encryptedSnapBytes);
+			signStream.writeObject(symEncrypConfig);	
+
 			
 			System.out.println("---------------");
 			System.out.println();
@@ -226,7 +231,7 @@ public class TPMClient {
 							0x08, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 
 			}; 
 
-			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS7Padding", "BC");
+			Cipher cipher = Cipher.getInstance(symEncrypConfig.getCipherAlg(), symEncrypConfig.getCipherProvider());
 			cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(ivBytes));
 			byte text[] = cipher.doFinal(encryptedSnapBytes);
 
@@ -252,7 +257,7 @@ public class TPMClient {
 			Certificate cert = keyStore.getCertificate(certName);
 			PublicKey publicKey = cert.getPublicKey();
 			
-			System.out.println("BLABLABLA = " + Utils.toHex(publicKey.getEncoded()));
+			System.out.println("PublicKey (bytes) = " + Utils.toHex(publicKey.getEncoded()));
 			
 			Signature signature = Signature.getInstance("SHA256withRSA", "BC");
 
