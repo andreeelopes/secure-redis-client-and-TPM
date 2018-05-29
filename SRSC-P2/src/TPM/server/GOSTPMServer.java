@@ -10,7 +10,6 @@ public class GOSTPMServer extends TPMServer{
 	private static final String LINUX_EXECUTABLES_PATH_WITH_FILTER = "ls -l /sbin";
 
 	
-
 	public GOSTPMServer(int port, String pathToKeyStore, String keyStorePwd, String entryPwd, String keyEntryName) {
 		super(port, pathToKeyStore, keyStorePwd);
 		super.initiateAttestationProtocol(keyStorePwd, entryPwd, keyEntryName);
