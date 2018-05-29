@@ -39,6 +39,7 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import utils.KeyManager;
 import utils.MyCache;
+import utils.Utils;
 
 public abstract class TPMServer {
 
@@ -49,6 +50,8 @@ public abstract class TPMServer {
 	private int nonceC;
 	private SSLSocket c;
 	private SSLServerSocket s;
+
+	private String pathToKeyStore;
 
 	private BigInteger g512 = new BigInteger(
 			"153d5d6172adb43045b68ae8e1de1070b6137005686d29d3d73a7"
@@ -68,12 +71,13 @@ public abstract class TPMServer {
 	private byte[] encryptedSnapBytes;
 
 
-	public TPMServer(int port) {
+	public TPMServer(int port, String pathToKeyStore, String keyStorePwd) {
 		cache = new MyCache();
-		s  = establishSecureConnection(port);
+		this.pathToKeyStore = pathToKeyStore;
+		s  = establishSecureConnection(port, keyStorePwd);
 	}
 
-	public void initiateAttestationProtocol() {
+	protected void initiateAttestationProtocol(String keyStorePwd, String entryPwd, String keyEntryName) {
 
 		while(true) {
 			try {
@@ -84,7 +88,7 @@ public abstract class TPMServer {
 					c.close();
 					continue;
 				}
-				sendSnapshotDH();
+				sendSnapshotDH(keyStorePwd, entryPwd, keyEntryName);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -93,7 +97,7 @@ public abstract class TPMServer {
 	}
 
 
-	private SSLServerSocket establishSecureConnection(int port) {
+	private SSLServerSocket establishSecureConnection(int port, String keyStorePwd) {
 
 		String[] confciphersuites={"TLS_RSA_WITH_AES_256_CBC_SHA256"};
 		String[] confprotocols={"TLSv1.2"};
@@ -101,11 +105,11 @@ public abstract class TPMServer {
 		SSLServerSocket s = null;
 
 		try {
-			KeyStore ks = KeyManager.getOrCreateKeyStore("GOSTPMKeyStore.jks", "srscsrsc");
+			KeyStore ks = KeyManager.getOrCreateKeyStore(pathToKeyStore, keyStorePwd);
 
 			KeyManagerFactory kmf = 
 					KeyManagerFactory.getInstance("SunX509");
-			kmf.init(ks, "srscsrsc".toCharArray());
+			kmf.init(ks, keyStorePwd.toCharArray());
 
 			SSLContext sc = SSLContext.getInstance("TLS");
 			sc.init(kmf.getKeyManagers(), null, null);
@@ -145,8 +149,9 @@ public abstract class TPMServer {
 		return true;
 
 	}
+	
 
-	private void sendSnapshotDH() {
+	private void sendSnapshotDH(String keyStorePwd, String entryPwd, String keyEntryName) {
 		try {
 
 			w = new ObjectOutputStream(c.getOutputStream());			
@@ -154,8 +159,7 @@ public abstract class TPMServer {
 			generateKeyDH();
 			w.writeChar('1');
 			encryptSnapshot();
-			signAndSend();
-			//snapshot();
+			signAndSend(keyStorePwd, entryPwd, keyEntryName);
 			w.flush();
 
 		} catch (IOException e) {
@@ -195,8 +199,9 @@ public abstract class TPMServer {
 		}
 
 	}
+	
 
-	private void signAndSend() {
+	private void signAndSend(String keyStorePwd, String entryPwd, String keyEntryName) {
 
 		try {
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -207,9 +212,12 @@ public abstract class TPMServer {
 			signStream.write(encryptedSnapBytes);
 			byte[] msg = out.toByteArray();
 
-			KeyPair keypair = KeyManager.getKeyPair("keypair", "srscsrsc", "GOSTPMKeyStore.jks", "srscsrsc");
+			KeyPair keypair = KeyManager.getKeyPair(keyEntryName, entryPwd, pathToKeyStore, keyStorePwd);
 			Signature signature = Signature.getInstance("SHA256withRSA", "BC");
 			signature.initSign(keypair.getPrivate());
+
+
+			System.out.println("Public Key(bytes) = " + Utils.toHex(keypair.getPublic().getEncoded()));
 
 			signature.update(msg);
 			byte[] signBytes = signature.sign();
@@ -221,12 +229,16 @@ public abstract class TPMServer {
 			w.writeInt(signBytes.length);
 			w.write(signBytes);
 
-			//			System.out.println(nonceC + 1);
-			//			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
-			//			System.out.println(encryptedSnapBytes.length);
-			//			System.out.println(Utils.toHex(encryptedSnapBytes));
-			//			System.out.println(signBytes.length);
-			//			System.out.println(Utils.toHex(signBytes));
+			System.out.println("---------------");
+			System.out.println();
+			System.out.println(nonceC + 1);
+			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
+			System.out.println(encryptedSnapBytes.length);
+			System.out.println(Utils.toHex(encryptedSnapBytes));
+			System.out.println(signBytes.length);
+			System.out.println(Utils.toHex(signBytes));
+			System.out.println();
+			System.out.println("---------------");
 
 		} catch (IOException | InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException e) {
 			e.printStackTrace();
@@ -258,8 +270,8 @@ public abstract class TPMServer {
 		} 
 
 	}
-	
-	
+
+
 	/**
 	 * 
 	 * @param command - the shell command to be executed

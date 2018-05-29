@@ -10,9 +10,9 @@ public class VMSTPMServer extends TPMServer{
 	private static final String LINUX_EXECUTABLES_PATH_WITH_FILTER = "ls -l /sbin";
 
 
-	public VMSTPMServer(int port) {
-		super(port);
-		super.initiateAttestationProtocol();
+	public VMSTPMServer(int port, String pathToKeyStore, String keyStorePwd, String entryPwd, String keyEntryName) {
+		super(port, pathToKeyStore, keyStorePwd);
+		super.initiateAttestationProtocol(keyStorePwd, entryPwd, keyEntryName );
 	}
 
 	public byte[] getSnapshot() {

@@ -43,8 +43,8 @@ public class Main {
 				System.out.println(p.getKey() + ": " + p.getValue());
 			}
 		}*/
-		System.out.println(new TPMClient().attest("localhost", 4443, "localhost", 4443));
-
+		System.out.println(new TPMClient().attest("localhost", 4443, "localhost", 4443,
+				"TPMClientTrustStore", "srscsrsc", "gostpmservercert", "vmstpmservercert"));
 	}
 
 }

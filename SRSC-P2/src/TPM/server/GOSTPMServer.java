@@ -1,7 +1,5 @@
 package TPM.server;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.security.MessageDigest;
 
 import utils.Utils;
@@ -11,10 +9,11 @@ public class GOSTPMServer extends TPMServer{
 	private static final String PROCESSES_WITH_ROOT_PERM = "ps -U root"; 
 	private static final String LINUX_EXECUTABLES_PATH_WITH_FILTER = "ls -l /sbin";
 
+	
 
-	public GOSTPMServer(int port) {
-		super(port);
-		super.initiateAttestationProtocol();
+	public GOSTPMServer(int port, String pathToKeyStore, String keyStorePwd, String entryPwd, String keyEntryName) {
+		super(port, pathToKeyStore, keyStorePwd);
+		super.initiateAttestationProtocol(keyStorePwd, entryPwd, keyEntryName);
 	}
 
 	public byte[] getSnapshot() {

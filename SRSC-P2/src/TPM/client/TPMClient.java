@@ -34,10 +34,12 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import javax.rmi.CORBA.Util;
 
 import utils.FileHelper;
 import utils.KeyManager;
 import utils.MyCache;
+import utils.Utils;
 
 public class TPMClient {
 
@@ -82,12 +84,14 @@ public class TPMClient {
 	}
 
 
-	public boolean attest(String ipGOSTPM, int portGOSTPM, String ipVMSTPM, int portVMSTPM) {
+	public boolean attest(String ipGOSTPM, int portGOSTPM, String ipVMSTPM, int portVMSTPM,
+			String pathtoTrustStore, String trustStorePwd,
+			String gosCertName, String vmsCertName) {
 
-		byte[] snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM);
-		byte[] snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM);
+		//byte[] snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM, pathtoTrustStore, trustStorePwd, gosCertName);
+		byte[] snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM, pathtoTrustStore, trustStorePwd, vmsCertName);
 
-		return attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM, GOS_SNAPSHOT_FILE_PATH) && 
+		return //attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM, GOS_SNAPSHOT_FILE_PATH) && 
 				attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM, VMS_SNAPSHOT_FILE_PATH); 
 	}
 
@@ -103,11 +107,11 @@ public class TPMClient {
 
 			return true;
 		}
-		
+
 		return Arrays.equals(oldSnapshot, snapshot);
 	}
 
-	private byte[] getSnapshot(String ip, int port) {
+	private byte[] getSnapshot(String ip, int port, String pathtoTrustStore, String trustStorePwd, String certName) {
 
 		byte[] snapshot = null;
 
@@ -122,7 +126,7 @@ public class TPMClient {
 			c.startHandshake();
 
 			requestSnapshotDH();
-			snapshot = receiveSnapshotDH(); 
+			snapshot = receiveSnapshotDH(pathtoTrustStore, trustStorePwd, certName); 
 
 
 			w.close();
@@ -155,7 +159,7 @@ public class TPMClient {
 		} 
 	}
 
-	private byte[] receiveSnapshotDH() {
+	private byte[] receiveSnapshotDH(String pathtoTrustStore, String trustStorePwd, String certName) {
 
 		byte[] snapshot = null;
 		try {
@@ -183,20 +187,21 @@ public class TPMClient {
 			signStream.writeObject(bPubNumber);	
 			signStream.writeInt(encryptedSnapBytes.length);
 			signStream.write(encryptedSnapBytes);
-			signStream.writeInt(signBytes.length);
-			signStream.write(signBytes);
-
-			//			System.out.println(nonceS);
-			//			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
-			//			System.out.println(encryptedSnapBytes.length);
-			//			System.out.println(Utils.toHex(encryptedSnapBytes));
-			//			System.out.println(signBytes.length);
-			//			System.out.println(Utils.toHex(signBytes));
-
+			
+			System.out.println("---------------");
+			System.out.println();
+			System.out.println(nonceS);
+			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
+			System.out.println(encryptedSnapBytes.length);
+			System.out.println(Utils.toHex(encryptedSnapBytes));
+			System.out.println(signBytes.length);
+			System.out.println(Utils.toHex(signBytes));
+			System.out.println();
+			System.out.println("---------------");
 
 			byte[] msg = out.toByteArray();
 
-			if(!verifySignature( signBytes, msg ))
+			if(!verifySignature( signBytes, msg, pathtoTrustStore, trustStorePwd, certName ))
 				return null;
 
 			generateKeyDH();
@@ -238,21 +243,25 @@ public class TPMClient {
 		return snapshot;
 	}
 
-	private boolean verifySignature(byte[] signBytes, byte[] msg) {
+	private boolean verifySignature(byte[] signBytes, byte[] msg, String pathtoTrustStore, String trustStorePwd, String certName) {
 
 		boolean verification = false;
 		try {
 
-			KeyStore keyStore = KeyManager.getOrCreateKeyStore("GOSTPMClientTrustedStore", "srscsrsc");
-			Certificate cert = keyStore.getCertificate("gostpmservercert");
+			KeyStore keyStore = KeyManager.getOrCreateKeyStore(pathtoTrustStore, trustStorePwd);
+			Certificate cert = keyStore.getCertificate(certName);
 			PublicKey publicKey = cert.getPublicKey();
-
+			
+			System.out.println("BLABLABLA = " + Utils.toHex(publicKey.getEncoded()));
+			
 			Signature signature = Signature.getInstance("SHA256withRSA", "BC");
 
 			signature.initVerify(publicKey);
 			signature.update(msg);
 
-			verification =  signature.verify(signBytes); 
+			verification = signature.verify(signBytes);
+			System.out.println("Is Signature Valid? " + verification);
+
 
 		} catch (KeyStoreException | SignatureException | NoSuchAlgorithmException | NoSuchProviderException | InvalidKeyException e) {
 			e.printStackTrace();
