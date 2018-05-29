@@ -99,6 +99,7 @@ public abstract class TPMServer {
 					continue;
 				}
 				sendSnapshotDH(keyStorePwd, entryPwd, keyEntryName);
+				System.out.println("\n\n\n SNAPSHOT SENT \n\n");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -314,7 +315,7 @@ public abstract class TPMServer {
 				output += line;
 		}
 
-		System.out.println("Output from " + command + " : " + output + "\n");
+		//System.out.println("Output from " + command + " : " + output + "\n");
 		return output;
 	}
 

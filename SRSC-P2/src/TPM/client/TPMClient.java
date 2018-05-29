@@ -91,10 +91,10 @@ public class TPMClient {
 			String pathtoTrustStore, String trustStorePwd,
 			String gosCertName, String vmsCertName) {
 
-		//byte[] snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM, pathtoTrustStore, trustStorePwd, gosCertName);
+		byte[] snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM, pathtoTrustStore, trustStorePwd, gosCertName);
 		byte[] snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM, pathtoTrustStore, trustStorePwd, vmsCertName);
 
-		return //attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM, GOS_SNAPSHOT_FILE_PATH) && 
+		return attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM, GOS_SNAPSHOT_FILE_PATH) && 
 				attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM, VMS_SNAPSHOT_FILE_PATH); 
 	}
 

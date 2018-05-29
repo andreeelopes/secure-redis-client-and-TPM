@@ -12,6 +12,7 @@ public class Main {
 
 	public static void main(String[] args) {
 
+	
 		//		RedisClient redis=new RedisClient();
 		//		redis.setClient(1, "ola", "ola", "ola", "ola", "ola");
 		//		//redis.setClient(1, "ola", "adeus", "ola", "ola", "ola");
@@ -43,8 +44,11 @@ public class Main {
 				System.out.println(p.getKey() + ": " + p.getValue());
 			}
 		}*/
-		System.out.println(new TPMClient().attest("localhost", 4446, "localhost", 4443,
-				"TPMClientTrustStore", "srscsrsc", "gostpmservercert", "vmstpmservercert"));
+		
+		
+		
+		System.out.println("\n\n\n ATTESTATION RESULT = " + new TPMClient().attest("localhost", 4446, "localhost", 4443,
+				"TPMClientTrustStore", "srscsrsc", "gostpmservercert", "vmstpmservercert") + "\n\n\n");
 	}
 
 }

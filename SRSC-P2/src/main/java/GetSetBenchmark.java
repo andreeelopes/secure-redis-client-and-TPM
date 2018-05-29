@@ -11,19 +11,19 @@ public class GetSetBenchmark {
 	private static final int TOTAL_OPERATIONS = 100;
 
 	public static void main(String[] args) throws UnknownHostException, IOException {
-		
+
+		long begin = Calendar.getInstance().getTimeInMillis();
+
 		//if attestion ok do benchmark
-		if(	new TPMClient().attest("localhost", 4446, "localhost", 4443,
-				"TPMClientTrustStore", "srscsrsc", "gostpmservercert", "vmstpmservercert")) {
-			
-			
+		//if(	new TPMClient().attest("localhost", 4446, "localhost", 4443,
+			//	"TPMClientTrustStore", "srscsrsc", "gostpmservercert", "vmstpmservercert")) {
+
 			//Jedis jedis = new Jedis("rediss://localhost", 6379);
 			Jedis jedis = new Jedis("172.17.0.2", 6379);
 
 			//jedis.connect();
 			jedis.flushAll();
 
-			long begin = Calendar.getInstance().getTimeInMillis();
 
 			for (int n = 0; n <= TOTAL_OPERATIONS; n++) {
 				String key = "foo" + n;
@@ -40,9 +40,16 @@ public class GetSetBenchmark {
 
 			jedis.disconnect();
 
-			System.out.println(((1000 * 2 * TOTAL_OPERATIONS) / elapsed) + " ops");	
+			System.out.println(((1000 * 2 * TOTAL_OPERATIONS) / elapsed) + " ops/s");	
 		}
 
 
 	}
-}
+//}
+
+
+
+
+
+
+
