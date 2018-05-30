@@ -93,7 +93,24 @@ public class TPMClient {
 
 		byte[] snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM, pathtoTrustStore, trustStorePwd, gosCertName);
 		byte[] snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM, pathtoTrustStore, trustStorePwd, vmsCertName);
+		
+		//byte[] snapshotGOSTPM = null;
+		//byte[] snapshotVMSTPM = null;
+		
+		//Thread GOSTPMThread = new Thread( () -> getSnapshot(ipGOSTPM, portGOSTPM, pathtoTrustStore, trustStorePwd, gosCertName));
+		//Thread VMSTPMThread = new Thread( () -> getSnapshot(ipVMSTPM, portVMSTPM, pathtoTrustStore, trustStorePwd, gosCertName));
+		
+//		GOSTPMThread.start();
+//		VMSTPMThread.start();
+//		
+//		try {
+//			GOSTPMThread.join();
+//			VMSTPMThread.join();
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
 
+		
 		return attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM, GOS_SNAPSHOT_FILE_PATH) && 
 				attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM, VMS_SNAPSHOT_FILE_PATH); 
 	}
