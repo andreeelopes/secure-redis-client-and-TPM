@@ -2,8 +2,6 @@ package TPM.server;
 
 import java.io.IOException;
 
-import utils.FileHelper;
-import utils.Utils;
 
 public class Main {
 
@@ -35,6 +33,7 @@ public class Main {
 
 
 		//new GOSTPMServer(port, keyStore, keyStorePwd, keyPairPwd, keyPairEntry, pathConfig);
+		//new VMSTPMServer(port, keyStore, keyStorePwd, keyPairPwd, keyPairEntry, pathConfig);
 
 
 		new GOSTPMServer(4446, "GOSTPMKeyStore.jks", "srscsrsc", "srscsrsc", "goskeypair", "GOSTPMConfig.xml");

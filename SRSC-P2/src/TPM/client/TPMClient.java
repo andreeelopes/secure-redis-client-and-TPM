@@ -212,16 +212,16 @@ public class TPMClient {
 			signStream.writeObject(symEncrypConfig);	
 
 			
-			System.out.println("---------------");
-			System.out.println();
-			System.out.println(nonceS);
-			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
-			System.out.println(encryptedSnapBytes.length);
-			System.out.println(Utils.toHex(encryptedSnapBytes));
-			System.out.println(signBytes.length);
-			System.out.println(Utils.toHex(signBytes));
-			System.out.println();
-			System.out.println("---------------");
+//			System.out.println("---------------");
+//			System.out.println();
+//			System.out.println(nonceS);
+//			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
+//			System.out.println(encryptedSnapBytes.length);
+//			System.out.println(Utils.toHex(encryptedSnapBytes));
+//			System.out.println(signBytes.length);
+//			System.out.println(Utils.toHex(signBytes));
+//			System.out.println();
+//			System.out.println("---------------");
 
 			byte[] msg = out.toByteArray();
 
@@ -276,7 +276,7 @@ public class TPMClient {
 			Certificate cert = keyStore.getCertificate(certName);
 			PublicKey publicKey = cert.getPublicKey();
 			
-			System.out.println("PublicKey (bytes) = " + Utils.toHex(publicKey.getEncoded()));
+//			System.out.println("PublicKey (bytes) = " + Utils.toHex(publicKey.getEncoded()));
 			
 			Signature signature = Signature.getInstance("SHA256withRSA", "BC");
 
@@ -284,7 +284,7 @@ public class TPMClient {
 			signature.update(msg);
 
 			verification = signature.verify(signBytes);
-			System.out.println("Is Signature Valid? " + verification);
+			System.out.println(">TPM Client: signature valid = " + verification);
 
 
 		} catch (KeyStoreException | SignatureException | NoSuchAlgorithmException | NoSuchProviderException | InvalidKeyException e) {

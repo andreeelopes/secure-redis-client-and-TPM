@@ -79,6 +79,8 @@ public abstract class TPMServer {
 	
 	
 	public TPMServer(int port, String pathToKeyStore, String keyStorePwd, String pathToConfigFile) {
+		System.out.println(">TPM server: initializing...");
+
 		cache = new MyCache();
 		this.pathToKeyStore = pathToKeyStore;
 		symEncrypConfig = XMLParser.getClientconfig(pathToConfigFile);
@@ -88,9 +90,11 @@ public abstract class TPMServer {
 	}
 
 	protected void initiateAttestationProtocol(String keyStorePwd, String entryPwd, String keyEntryName) {
-
+		
 		while(true) {
 			try {
+				System.out.println(">TPM server: waiting for requests.");
+
 				c = (SSLSocket) s.accept();
 				printSocketInfo(c);
 
@@ -99,7 +103,7 @@ public abstract class TPMServer {
 					continue;
 				}
 				sendSnapshotDH(keyStorePwd, entryPwd, keyEntryName);
-				System.out.println("\n\n\n SNAPSHOT SENT \n\n");
+				System.out.println(">TPM server: response sent.");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -133,7 +137,7 @@ public abstract class TPMServer {
 			printServerSocketInfo(s);
 
 		} catch (Exception e) {
-			System.err.println(e.toString());
+			e.printStackTrace();
 		}
 		return s;
 	}
@@ -151,7 +155,8 @@ public abstract class TPMServer {
 
 			cache.add( nonceC, TIME_TO_EXPIRE);			
 			aPubNumber = (PublicKey) r.readObject();
-
+			
+			System.out.println(">TPM server: processing request.");
 
 		} catch (IOException | ClassNotFoundException e) {
 			e.printStackTrace();
@@ -172,7 +177,8 @@ public abstract class TPMServer {
 			encryptSnapshot();
 			signAndSend(keyStorePwd, entryPwd, keyEntryName);
 			w.flush();
-
+			
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -185,6 +191,8 @@ public abstract class TPMServer {
 
 		try {
 
+			System.out.println(">TPM server: encrypting snapshot...");
+			
 			byte[] snapshot = getSnapshot();
 
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -204,6 +212,8 @@ public abstract class TPMServer {
 			Cipher cipher = Cipher.getInstance(symEncrypConfig.getCipherAlg(), symEncrypConfig.getCipherProvider());
 			cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(ivBytes));
 			encryptedSnapBytes = cipher.doFinal(snapshotBytes);
+			
+			System.out.println(">TPM server: snapshot encryption has finished.");
 
 		} catch (IOException | IllegalBlockSizeException | BadPaddingException | NoSuchAlgorithmException | 
 				NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException e) {
@@ -230,11 +240,13 @@ public abstract class TPMServer {
 			signature.initSign(keypair.getPrivate());
 
 
-			System.out.println("Public Key(bytes) = " + Utils.toHex(keypair.getPublic().getEncoded()));
+//			System.out.println("Public Key(bytes) = " + Utils.toHex(keypair.getPublic().getEncoded()));
 
 			signature.update(msg);
 			byte[] signBytes = signature.sign();
 
+			System.out.println(">TPM server: finish signing mensage.");
+			
 			w.writeInt(nonceC + 1);
 			w.writeObject(bPubNumber);
 			w.writeInt(encryptedSnapBytes.length);
@@ -243,16 +255,16 @@ public abstract class TPMServer {
 			w.write(signBytes);
 			w.writeObject(symEncrypConfig);
 			
-			System.out.println("---------------");
-			System.out.println();
-			System.out.println(nonceC + 1);
-			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
-			System.out.println(encryptedSnapBytes.length);
-			System.out.println(Utils.toHex(encryptedSnapBytes));
-			System.out.println(signBytes.length);
-			System.out.println(Utils.toHex(signBytes));
-			System.out.println();
-			System.out.println("---------------");
+//			System.out.println("---------------");
+//			System.out.println();
+//			System.out.println(nonceC + 1);
+//			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
+//			System.out.println(encryptedSnapBytes.length);
+//			System.out.println(Utils.toHex(encryptedSnapBytes));
+//			System.out.println(signBytes.length);
+//			System.out.println(Utils.toHex(signBytes));
+//			System.out.println();
+//			System.out.println("---------------");
 
 		} catch (IOException | InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException e) {
 			e.printStackTrace();
@@ -279,6 +291,8 @@ public abstract class TPMServer {
 			byte[] keyBytes = hash.digest(bKeyAgree.generateSecret());
 			key = new SecretKeySpec(keyBytes, "AES");
 
+			System.out.println(">TPM server: simmetric encryption key created based on DH.");
+			
 		} catch (NoSuchAlgorithmException | NoSuchProviderException | InvalidAlgorithmParameterException | InvalidKeyException e) {
 			e.printStackTrace();
 		} 
@@ -315,7 +329,7 @@ public abstract class TPMServer {
 				output += line;
 		}
 
-		//System.out.println("Output from " + command + " : " + output + "\n");
+		//System.out.println(">TPM server: output from " + command + " : " + output + "\n");
 		return output;
 	}
 
