@@ -48,7 +48,7 @@ public class Main {
 		
 		
 		System.out.println("\n\n\n ATTESTATION RESULT = " + new TPMClient().attest("localhost", 4446, "localhost", 4443,
-				"TPMClientTrustStore", "srscsrsc", "gostpmservercert", "vmstpmservercert") + "\n\n\n");
+				"TPMClientTrustStore", "srscsrsc", "goscert", "vmscert") + "\n\n\n");
 	}
 
 }

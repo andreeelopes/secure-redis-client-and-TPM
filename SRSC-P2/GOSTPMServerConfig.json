@@ -1,0 +1,23 @@
+{
+  "keyStorePath": "GOSTPMKeyStore.jks",
+  "keyStorePwd": "srscsrsc",
+  "keyPairEntry": "gospair",
+  "keyPairPwd": "srscsrsc",
+  "sslCipherSuites": [
+    "TLS_RSA_WITH_AES_256_CBC_SHA256"
+  ],
+  "sslProtocols": [
+    "TLSv1.2"
+  ],
+  "keyManageFactoryAlg": "SunX509",
+  "secureSocketProtocol": "TLS",
+  "signatureAlg": "SHA256withRSA",
+  "signatureProvider": "BC",
+  "dhAlg": "DH",
+  "dhProvider": "BC",
+  "hashAlg": "SHA256",
+  "hashProvider": "BC",
+  "symmAlg": "AES/CBC/PKCS7Padding",
+  "symmProvider": "BC",
+  "symmKeySize": 256
+}

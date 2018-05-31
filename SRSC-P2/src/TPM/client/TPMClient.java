@@ -91,7 +91,7 @@ public class TPMClient {
 			String pathtoTrustStore, String trustStorePwd,
 			String gosCertName, String vmsCertName) {
 
-		byte[] snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM, pathtoTrustStore, trustStorePwd, gosCertName);
+		//byte[] snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM, pathtoTrustStore, trustStorePwd, gosCertName);
 		byte[] snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM, pathtoTrustStore, trustStorePwd, vmsCertName);
 		
 		//byte[] snapshotGOSTPM = null;
@@ -111,7 +111,7 @@ public class TPMClient {
 //		}
 
 		
-		return attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM, GOS_SNAPSHOT_FILE_PATH) && 
+		return //attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM, GOS_SNAPSHOT_FILE_PATH) && 
 				attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM, VMS_SNAPSHOT_FILE_PATH); 
 	}
 
@@ -201,8 +201,7 @@ public class TPMClient {
 			byte [] signBytes = new byte[r.readInt()];
 			r.read(signBytes);
 			symEncrypConfig = (CipherConfig) r.readObject();
-
-
+			
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			ObjectOutputStream signStream = new ObjectOutputStream(out);
 			signStream.writeInt(nonceS);			
@@ -248,9 +247,10 @@ public class TPMClient {
 			byte[]	ivBytes = 
 					new byte[] { 0x08, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 ,
 							0x08, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 
-			}; 
+			};
+			
 
-			Cipher cipher = Cipher.getInstance(symEncrypConfig.getCipherAlg(), symEncrypConfig.getCipherProvider());
+			Cipher cipher = Cipher.getInstance(symEncrypConfig.getCipherSuite(), symEncrypConfig.getCipherProvider());
 			cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(ivBytes));
 			byte text[] = cipher.doFinal(encryptedSnapBytes);
 

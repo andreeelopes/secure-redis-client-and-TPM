@@ -3,6 +3,8 @@ package TPM.server;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
@@ -38,6 +40,9 @@ import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 
+import com.google.gson.Gson;
+import com.google.gson.stream.JsonReader;
+
 import utils.CipherConfig;
 import utils.KeyManager;
 import utils.MyCache;
@@ -45,19 +50,16 @@ import utils.Utils;
 import utils.XMLParser;
 
 public abstract class TPMServer {
-	
+
 	private static final char ATTESTATION_REQUEST_CODE = '0';
 	private static final char ATTESTATION_RESPONSE_CODE = '1';
-	
+
 	private MyCache cache;
 	private static final int TIME_TO_EXPIRE = 10000;
 
 	private SSLSocket c;
 	private SSLServerSocket s;
 
-	private String pathToKeyStore;
-
-	private CipherConfig symEncrypConfig;
 	private SecretKey key;
 	private PublicKey bPubNumber;
 	private PublicKey aPubNumber;
@@ -66,7 +68,9 @@ public abstract class TPMServer {
 	private ObjectOutputStream w;
 	private byte[] encryptedSnapBytes;
 
+	private TPMServerConfig tpmConfig;
 	
+
 	private BigInteger g512 = new BigInteger(
 			"153d5d6172adb43045b68ae8e1de1070b6137005686d29d3d73a7"
 					+ "749199681ee5b212c9b96bfdcfa5b20cd5e3fd2044895d609cf9b"
@@ -76,21 +80,33 @@ public abstract class TPMServer {
 			"9494fec095f3b85ee286542b3836fc81a5dd0a0349b4c239dd387"
 					+ "44d488cf8e31db8bcb7d33b41abb9e5a33cca9144b1cef332c94b"
 					+ "f0573bf047a3aca98cdf3b", 16);
-	
-	
-	public TPMServer(int port, String pathToKeyStore, String keyStorePwd, String pathToConfigFile) {
+
+
+	public TPMServer(int port, String configFilePath) {
 		System.out.println(">TPM server: initializing...");
 
 		cache = new MyCache();
-		this.pathToKeyStore = pathToKeyStore;
-		symEncrypConfig = XMLParser.getClientconfig(pathToConfigFile);
-
-		s = establishSecureConnection(port, keyStorePwd);
-
+		tpmConfig = getConfiguration(configFilePath);
+			
+		s = establishSecureConnection(port);
 	}
 
-	protected void initiateAttestationProtocol(String keyStorePwd, String entryPwd, String keyEntryName) {
-		
+	private TPMServerConfig getConfiguration(String fileName) {
+		Gson gson = new Gson();
+		JsonReader reader;
+		TPMServerConfig tpmConfig = null;
+		try {
+			reader = new JsonReader(new FileReader(fileName));
+			tpmConfig = gson.fromJson(reader, TPMServerConfig.class);
+		} catch (FileNotFoundException e) {
+			System.err.println(">TPM server: configuration file for TPM not found.");
+			e.printStackTrace();
+		}
+		return tpmConfig;
+	}
+
+	protected void initiateAttestationProtocol() {
+
 		while(true) {
 			try {
 				System.out.println(">TPM server: waiting for requests.");
@@ -102,7 +118,7 @@ public abstract class TPMServer {
 					c.close();
 					continue;
 				}
-				sendSnapshotDH(keyStorePwd, entryPwd, keyEntryName);
+				sendSnapshotDH();
 				System.out.println(">TPM server: response sent.");
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -112,10 +128,12 @@ public abstract class TPMServer {
 	}
 
 
-	private SSLServerSocket establishSecureConnection(int port, String keyStorePwd) {
+	private SSLServerSocket establishSecureConnection(int port) {
 
-		String[] confciphersuites={"TLS_RSA_WITH_AES_256_CBC_SHA256"};
-		String[] confprotocols={"TLSv1.2"};
+		String [] confciphersuites = tpmConfig.getSslCipherSuites();
+		String [] confprotocols = tpmConfig.getSslProtocols();
+		String pathToKeyStore = tpmConfig.getKeyStorePath();
+		String keyStorePwd = tpmConfig.getKeyStorePwd();
 
 		SSLServerSocket s = null;
 
@@ -123,10 +141,10 @@ public abstract class TPMServer {
 			KeyStore ks = KeyManager.getOrCreateKeyStore(pathToKeyStore, keyStorePwd);
 
 			KeyManagerFactory kmf = 
-					KeyManagerFactory.getInstance("SunX509");
+					KeyManagerFactory.getInstance(tpmConfig.getKeyManageFactoryAlg());
 			kmf.init(ks, keyStorePwd.toCharArray());
 
-			SSLContext sc = SSLContext.getInstance("TLS");
+			SSLContext sc = SSLContext.getInstance(tpmConfig.getSecureSocketProtocol());
 			sc.init(kmf.getKeyManagers(), null, null);
 			SSLServerSocketFactory ssf = sc.getServerSocketFactory();
 			s = (SSLServerSocket) ssf.createServerSocket(port);
@@ -155,7 +173,7 @@ public abstract class TPMServer {
 
 			cache.add( nonceC, TIME_TO_EXPIRE);			
 			aPubNumber = (PublicKey) r.readObject();
-			
+
 			System.out.println(">TPM server: processing request.");
 
 		} catch (IOException | ClassNotFoundException e) {
@@ -165,9 +183,9 @@ public abstract class TPMServer {
 		return true;
 
 	}
-	
 
-	private void sendSnapshotDH(String keyStorePwd, String entryPwd, String keyEntryName) {
+
+	private void sendSnapshotDH() {
 		try {
 
 			w = new ObjectOutputStream(c.getOutputStream());			
@@ -175,10 +193,10 @@ public abstract class TPMServer {
 			generateKeyDH();
 			w.writeChar(ATTESTATION_RESPONSE_CODE);
 			encryptSnapshot();
-			signAndSend(keyStorePwd, entryPwd, keyEntryName);
+			signAndSend();
 			w.flush();
-			
-			
+
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -192,7 +210,7 @@ public abstract class TPMServer {
 		try {
 
 			System.out.println(">TPM server: encrypting snapshot...");
-			
+
 			byte[] snapshot = getSnapshot();
 
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -207,12 +225,10 @@ public abstract class TPMServer {
 			}; 
 
 
-			
-			
-			Cipher cipher = Cipher.getInstance(symEncrypConfig.getCipherAlg(), symEncrypConfig.getCipherProvider());
-			cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(ivBytes));
+			Cipher cipher = Cipher.getInstance(tpmConfig.getSymmAlg(), tpmConfig.getSymmProvider());
+			cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(ivBytes));//TODO passar para a configuracao assim fica da responsabilidade do cliente
 			encryptedSnapBytes = cipher.doFinal(snapshotBytes);
-			
+
 			System.out.println(">TPM server: snapshot encryption has finished.");
 
 		} catch (IOException | IllegalBlockSizeException | BadPaddingException | NoSuchAlgorithmException | 
@@ -221,9 +237,9 @@ public abstract class TPMServer {
 		}
 
 	}
-	
 
-	private void signAndSend(String keyStorePwd, String entryPwd, String keyEntryName) {
+
+	private void signAndSend() {
 
 		try {
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -232,39 +248,40 @@ public abstract class TPMServer {
 			signStream.writeObject(bPubNumber);	
 			signStream.writeInt(encryptedSnapBytes.length);
 			signStream.write(encryptedSnapBytes);
-			signStream.writeObject(symEncrypConfig);
+			signStream.writeObject(tpmConfig.getSymEncrypConfig());
 			byte[] msg = out.toByteArray();
 
-			KeyPair keypair = KeyManager.getKeyPair(keyEntryName, entryPwd, pathToKeyStore, keyStorePwd);
-			Signature signature = Signature.getInstance("SHA256withRSA", "BC");
+			KeyPair keypair = KeyManager.getKeyPair(tpmConfig.getKeyPairEntry(), tpmConfig.getKeyPairPwd(), 
+					tpmConfig.getKeyStorePath(), tpmConfig.getKeyStorePwd());
+			Signature signature = Signature.getInstance(tpmConfig.getSignatureAlg(), tpmConfig.getSignatureProvider());
 			signature.initSign(keypair.getPrivate());
 
 
-//			System.out.println("Public Key(bytes) = " + Utils.toHex(keypair.getPublic().getEncoded()));
+			//			System.out.println("Public Key(bytes) = " + Utils.toHex(keypair.getPublic().getEncoded()));
 
 			signature.update(msg);
 			byte[] signBytes = signature.sign();
 
 			System.out.println(">TPM server: finish signing mensage.");
-			
+
 			w.writeInt(nonceC + 1);
 			w.writeObject(bPubNumber);
 			w.writeInt(encryptedSnapBytes.length);
 			w.write(encryptedSnapBytes);
 			w.writeInt(signBytes.length);
 			w.write(signBytes);
-			w.writeObject(symEncrypConfig);
-			
-//			System.out.println("---------------");
-//			System.out.println();
-//			System.out.println(nonceC + 1);
-//			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
-//			System.out.println(encryptedSnapBytes.length);
-//			System.out.println(Utils.toHex(encryptedSnapBytes));
-//			System.out.println(signBytes.length);
-//			System.out.println(Utils.toHex(signBytes));
-//			System.out.println();
-//			System.out.println("---------------");
+			w.writeObject(tpmConfig.getSymEncrypConfig());
+
+			//			System.out.println("---------------");
+			//			System.out.println();
+			//			System.out.println(nonceC + 1);
+			//			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
+			//			System.out.println(encryptedSnapBytes.length);
+			//			System.out.println(Utils.toHex(encryptedSnapBytes));
+			//			System.out.println(signBytes.length);
+			//			System.out.println(Utils.toHex(signBytes));
+			//			System.out.println();
+			//			System.out.println("---------------");
 
 		} catch (IOException | InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException e) {
 			e.printStackTrace();
@@ -277,22 +294,22 @@ public abstract class TPMServer {
 
 		KeyPairGenerator keyGen;
 		try {
-			keyGen = KeyPairGenerator.getInstance("DH", "BC");
+			keyGen = KeyPairGenerator.getInstance(tpmConfig.getDhAlg(), tpmConfig.getDhProvider());
 			keyGen.initialize(dhParams, new SecureRandom());
 
-			KeyAgreement bKeyAgree = KeyAgreement.getInstance("DH", "BC");
+			KeyAgreement bKeyAgree = KeyAgreement.getInstance(tpmConfig.getDhAlg(), tpmConfig.getDhProvider());
 			KeyPair      bPair = keyGen.generateKeyPair();
 			bPubNumber = bPair.getPublic();
 
 			bKeyAgree.init(bPair.getPrivate());
 			bKeyAgree.doPhase(aPubNumber, true);
-			MessageDigest hash = MessageDigest.getInstance("SHA256", "BC");
+			MessageDigest hash = MessageDigest.getInstance(tpmConfig.getHashAlg(), tpmConfig.getHashProvider());
 
 			byte[] keyBytes = hash.digest(bKeyAgree.generateSecret());
-			key = new SecretKeySpec(keyBytes, "AES");
+			key = new SecretKeySpec(keyBytes, tpmConfig.getSymmAlg());
 
 			System.out.println(">TPM server: simmetric encryption key created based on DH.");
-			
+
 		} catch (NoSuchAlgorithmException | NoSuchProviderException | InvalidAlgorithmParameterException | InvalidKeyException e) {
 			e.printStackTrace();
 		} 
