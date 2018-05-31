@@ -2,6 +2,7 @@ package TPM.server;
 
 import com.google.gson.Gson;
 
+import TPM.CipherSuiteConfig;
 import utils.CipherConfig;
 
 public class TPMServerConfig {
@@ -66,8 +67,8 @@ public class TPMServerConfig {
 		return json;
 	}
 	
-	public CipherConfig getSymEncrypConfig() {
-		return new CipherConfig("*", getSymmAlg(), "*", getSymmProvider(), getSymmKeySize(), -1, "");		
+	public CipherSuiteConfig getSymEncrypConfig() {
+		return new CipherSuiteConfig(getHashAlg(), getHashProvider(), getSymmAlg(), getSymmProvider(), getSymmKeySize());		
 	}
 	
 	

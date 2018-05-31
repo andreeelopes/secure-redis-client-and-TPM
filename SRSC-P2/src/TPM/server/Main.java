@@ -36,8 +36,8 @@ public class Main {
 		//new VMSTPMServer(port, configPath);
 
 
-		//new GOSTPMServer(4446, "GOSTPMServerConfig.json");
-		new VMSTPMServer(4443, "VMSTPMServerConfig.json");
+		new GOSTPMServer(4446, "GOSTPMServerConfig.json");
+		//new VMSTPMServer(4443, "VMSTPMServerConfig.json");
 		
 //		TPMServerConfig tpmconfig = new TPMServerConfig("GOSTPMKeyStore.jks", "srscsrsc", "goskeypair", "srscsrsc",
 //				new String[] {"TLS_RSA_WITH_AES_256_CBC_SHA256"}, new String[] {"TLSv1.2"}, "SunX509", "TLS",

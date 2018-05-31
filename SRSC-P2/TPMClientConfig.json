@@ -1,0 +1,10 @@
+{
+  "trustStorePath": "TPMClientTrustStore",
+  "trustStorePwd": "srscsrsc",
+  "gosCertEntry": "goscert",
+  "vmsCertEntry": "vmscert",
+  "dhAlg": "DH",
+  "dhProvider": "BC",
+  "signatureAlg": "SHA256withRSA",
+  "signatureProvider": "BC"
+}

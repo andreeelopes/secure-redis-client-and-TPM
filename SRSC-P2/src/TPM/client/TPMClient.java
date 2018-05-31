@@ -2,6 +2,8 @@ package TPM.client;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -36,6 +38,11 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.rmi.CORBA.Util;
 
+import com.google.gson.Gson;
+import com.google.gson.stream.JsonReader;
+
+import TPM.CipherSuiteConfig;
+import TPM.server.TPMServerConfig;
 import utils.CipherConfig;
 import utils.FileHelper;
 import utils.KeyManager;
@@ -44,6 +51,8 @@ import utils.Utils;
 
 public class TPMClient {
 
+	private TPMClientConfig config;
+	private CipherSuiteConfig agreedCipherConfig; //the cipher suite agreed by the server to be used in further communications after DH
 	private byte[] oldSnapshotGOSTPM;
 	private byte[] oldSnapshotVMSTPM;
 
@@ -52,7 +61,6 @@ public class TPMClient {
 
 	private int nonceC;
 
-	private CipherConfig symEncrypConfig;
 	private KeyPair aPair;
 	private SecretKeySpec key;
 	private PublicKey bPubNumber;
@@ -80,25 +88,25 @@ public class TPMClient {
 
 
 
-	public TPMClient() {
+	public TPMClient(String configFilePath) {
+		config = getConfiguration(configFilePath);
 		cache = new MyCache();
 		oldSnapshotGOSTPM = FileHelper.ToBytes(GOS_SNAPSHOT_FILE_PATH);
 		oldSnapshotVMSTPM = FileHelper.ToBytes(VMS_SNAPSHOT_FILE_PATH);
 	}
 
 
-	public boolean attest(String ipGOSTPM, int portGOSTPM, String ipVMSTPM, int portVMSTPM,
-			String pathtoTrustStore, String trustStorePwd,
-			String gosCertName, String vmsCertName) {
+	public boolean attest(String ipGOSTPM, int portGOSTPM, 
+			String ipVMSTPM, int portVMSTPM) {
 
-		//byte[] snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM, pathtoTrustStore, trustStorePwd, gosCertName);
-		byte[] snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM, pathtoTrustStore, trustStorePwd, vmsCertName);
+		byte[] snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM, config.getGosCertEntry());
+		//byte[] snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM, config.getVmsCertEntry());
 		
 		//byte[] snapshotGOSTPM = null;
 		//byte[] snapshotVMSTPM = null;
 		
-		//Thread GOSTPMThread = new Thread( () -> getSnapshot(ipGOSTPM, portGOSTPM, pathtoTrustStore, trustStorePwd, gosCertName));
-		//Thread VMSTPMThread = new Thread( () -> getSnapshot(ipVMSTPM, portVMSTPM, pathtoTrustStore, trustStorePwd, gosCertName));
+		//Thread GOSTPMThread = new Thread( () -> getSnapshot(ipGOSTPM, portGOSTPM));
+		//Thread VMSTPMThread = new Thread( () -> getSnapshot(ipVMSTPM, portVMSTPM));
 		
 //		GOSTPMThread.start();
 //		VMSTPMThread.start();
@@ -111,10 +119,24 @@ public class TPMClient {
 //		}
 
 		
-		return //attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM, GOS_SNAPSHOT_FILE_PATH) && 
-				attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM, VMS_SNAPSHOT_FILE_PATH); 
+		return attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM, GOS_SNAPSHOT_FILE_PATH);// && 
+			//	attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM, VMS_SNAPSHOT_FILE_PATH); 
 	}
 
+	private TPMClientConfig getConfiguration(String fileName) {
+		Gson gson = new Gson();
+		JsonReader reader;
+		TPMClientConfig clientConfig = null;
+		try {
+			reader = new JsonReader(new FileReader(fileName));
+			clientConfig = gson.fromJson(reader, TPMClientConfig.class);
+		} catch (FileNotFoundException e) {
+			System.err.println(">TPM client: configuration file not found.");
+			e.printStackTrace();
+		}
+		return clientConfig;
+	}
+	
 	private boolean attestTPM(byte[] snapshot, byte[] oldSnapshot, String pathName ) {
 
 
@@ -131,7 +153,7 @@ public class TPMClient {
 		return Arrays.equals(oldSnapshot, snapshot);
 	}
 
-	private byte[] getSnapshot(String ip, int port, String pathtoTrustStore, String trustStorePwd, String certName) {
+	private byte[] getSnapshot(String ip, int port, String certName) {
 
 		byte[] snapshot = null;
 
@@ -146,7 +168,7 @@ public class TPMClient {
 			c.startHandshake();
 
 			requestSnapshotDH();
-			snapshot = receiveSnapshotDH(pathtoTrustStore, trustStorePwd, certName); 
+			snapshot = receiveSnapshotDH(certName); 
 
 
 			w.close();
@@ -162,7 +184,7 @@ public class TPMClient {
 
 		try {
 			DHParameterSpec dhParams = new DHParameterSpec(p512, g512);
-			KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DH", "BC"); 
+			KeyPairGenerator keyGen = KeyPairGenerator.getInstance(config.getDhAlg(), config.getDhProvider()); 
 			keyGen.initialize(dhParams, new SecureRandom());
 			aPair = keyGen.generateKeyPair();
 
@@ -179,7 +201,7 @@ public class TPMClient {
 		} 
 	}
 
-	private byte[] receiveSnapshotDH(String pathtoTrustStore, String trustStorePwd, String certName) {
+	private byte[] receiveSnapshotDH(String certName) {
 
 		byte[] snapshot = null;
 		try {
@@ -200,7 +222,7 @@ public class TPMClient {
 
 			byte [] signBytes = new byte[r.readInt()];
 			r.read(signBytes);
-			symEncrypConfig = (CipherConfig) r.readObject();
+			agreedCipherConfig = (CipherSuiteConfig) r.readObject();
 			
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			ObjectOutputStream signStream = new ObjectOutputStream(out);
@@ -208,7 +230,7 @@ public class TPMClient {
 			signStream.writeObject(bPubNumber);	
 			signStream.writeInt(encryptedSnapBytes.length);
 			signStream.write(encryptedSnapBytes);
-			signStream.writeObject(symEncrypConfig);	
+			signStream.writeObject(agreedCipherConfig);	
 
 			
 //			System.out.println("---------------");
@@ -224,7 +246,7 @@ public class TPMClient {
 
 			byte[] msg = out.toByteArray();
 
-			if(!verifySignature( signBytes, msg, pathtoTrustStore, trustStorePwd, certName ))
+			if(!verifySignature( signBytes, msg, certName ))
 				return null;
 
 			generateKeyDH();
@@ -250,7 +272,7 @@ public class TPMClient {
 			};
 			
 
-			Cipher cipher = Cipher.getInstance(symEncrypConfig.getCipherSuite(), symEncrypConfig.getCipherProvider());
+			Cipher cipher = Cipher.getInstance(agreedCipherConfig.getSymmAlg(), agreedCipherConfig.getSymmProvider());
 			cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(ivBytes));
 			byte text[] = cipher.doFinal(encryptedSnapBytes);
 
@@ -267,18 +289,18 @@ public class TPMClient {
 		return snapshot;
 	}
 
-	private boolean verifySignature(byte[] signBytes, byte[] msg, String pathtoTrustStore, String trustStorePwd, String certName) {
+	private boolean verifySignature(byte[] signBytes, byte[] msg, String certName) {
 
 		boolean verification = false;
 		try {
 
-			KeyStore keyStore = KeyManager.getOrCreateKeyStore(pathtoTrustStore, trustStorePwd);
+			KeyStore keyStore = KeyManager.getOrCreateKeyStore(config.getTrustStorePath(), config.getTrustStorePwd());
 			Certificate cert = keyStore.getCertificate(certName);
 			PublicKey publicKey = cert.getPublicKey();
 			
 //			System.out.println("PublicKey (bytes) = " + Utils.toHex(publicKey.getEncoded()));
 			
-			Signature signature = Signature.getInstance("SHA256withRSA", "BC");
+			Signature signature = Signature.getInstance(config.getSignatureAlg(), config.getSignatureProvider());
 
 			signature.initVerify(publicKey);
 			signature.update(msg);
@@ -298,13 +320,13 @@ public class TPMClient {
 	private void generateKeyDH() {
 
 		try {
-			KeyAgreement aKeyAgree = KeyAgreement.getInstance("DH", "BC");
+			KeyAgreement aKeyAgree = KeyAgreement.getInstance(config.getDhAlg(), config.getDhProvider());
 			aKeyAgree.init(aPair.getPrivate());
 			aKeyAgree.doPhase(bPubNumber, true);
-			MessageDigest hash = MessageDigest.getInstance("SHA256", "BC");
+			MessageDigest hash = MessageDigest.getInstance(agreedCipherConfig.getHashAlg(), agreedCipherConfig.getHashProvider());
 
 			byte[] keyBytes = hash.digest(aKeyAgree.generateSecret());
-			key = new SecretKeySpec(keyBytes, "AES");
+			key = new SecretKeySpec(keyBytes, agreedCipherConfig.getSymmAlg());
 
 		} catch (InvalidKeyException | IllegalStateException | NoSuchAlgorithmException | NoSuchProviderException e) {
 			e.printStackTrace();

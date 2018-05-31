@@ -16,8 +16,7 @@ public class GetSetBenchmark {
 		long begin = Calendar.getInstance().getTimeInMillis();
 
 		//if attestion ok do benchmark
-		if(	new TPMClient().attest("localhost", 4446, "localhost", 4443,
-				"TPMClientTrustStore", "srscsrsc", "gostpmservercert", "vmstpmservercert")) {
+		if(	new TPMClient("TPMClientConfig.json").attest("localhost", 4446, "localhost", 4443)) {
 
 			//Jedis jedis = new Jedis("rediss://localhost", 6379);
 			RedisClient jedis = new RedisClient();

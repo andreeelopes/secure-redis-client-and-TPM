@@ -4,6 +4,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import TPM.client.TPMClient;
+import TPM.client.TPMClientConfig;
 import redis.client.RedisClient;
 import redis.client.SafeRedis;
 import utils.Pair;
@@ -46,9 +47,12 @@ public class Main {
 		}*/
 		
 		
+		//String json = new TPMClientConfig("TPMClientTrustStore", "srscsrsc", "goscert", "vmscert", "DH", "BC", "SHA256withRSA", "BC",
+		//		"SHA256", "BC").toJSON();
+		//System.out.println("JSON = \n" + json);
 		
-		System.out.println("\n\n\n ATTESTATION RESULT = " + new TPMClient().attest("localhost", 4446, "localhost", 4443,
-				"TPMClientTrustStore", "srscsrsc", "goscert", "vmscert") + "\n\n\n");
+		
+		System.out.println("\n\n\n ATTESTATION RESULT = " + new TPMClient("TPMClientConfig.json").attest("localhost", 4446, "localhost", 4443) + "\n\n\n");
 	}
 
 }
