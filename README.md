@@ -2,21 +2,19 @@
 
 ### Run Instructions:
 
-    ######TODO
-    * Por configuravel os comandos das atestacoes
-    * Por todas as ciphersuites em ficheiros de configração para cada servidor TPM
+######TODO
 
 ###Configuration
 
 ####VMSTPMAttestCommands.json
-	##### This file stores all shell commands and the respective columns to serve has a attestation from VMS TPM Server.
+##### This file stores all shell commands and the respective columns to serve has a attestation from VMS TPM Server.
 ####GOSTPMAttestCommands.json
-	##### This file stores all shell commands and the respective columns to serve has a attestation from GOS TPM Server.
+##### This file stores all shell commands and the respective columns to serve has a attestation from GOS TPM Server.
 
 ####GOSTPMServerConfig.json
-	###### This file stores all configurations for the Guest OS TPM server. (key stores, passwords, ciphersuites for TLS, etc...)
+###### This file stores all configurations for the Guest OS TPM server. (key stores, passwords, ciphersuites for TLS, etc...)
 ####VMSTPMServerConfig.json
-	###### This file stores all configurations for the VMS TPM server. (key stores, passwords, ciphersuites for TLS, etc...)
+###### This file stores all configurations for the VMS TPM server. (key stores, passwords, ciphersuites for TLS, etc...)
 
 ###Files
 
