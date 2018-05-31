@@ -43,13 +43,15 @@ import javax.net.ssl.SSLSocket;
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
 
-import utils.CipherConfig;
 import utils.KeyManager;
 import utils.MyCache;
 import utils.Utils;
-import utils.XMLParser;
+
 
 public abstract class TPMServer {
+
+	private TPMServerConfig tpmConfig;
+	private  AttestationCommand[] attestationCommands;
 
 	private static final char ATTESTATION_REQUEST_CODE = '0';
 	private static final char ATTESTATION_RESPONSE_CODE = '1';
@@ -68,8 +70,6 @@ public abstract class TPMServer {
 	private ObjectOutputStream w;
 	private byte[] encryptedSnapBytes;
 
-	private TPMServerConfig tpmConfig;
-	
 
 	private BigInteger g512 = new BigInteger(
 			"153d5d6172adb43045b68ae8e1de1070b6137005686d29d3d73a7"
@@ -82,16 +82,17 @@ public abstract class TPMServer {
 					+ "f0573bf047a3aca98cdf3b", 16);
 
 
-	public TPMServer(int port, String configFilePath) {
+	public TPMServer(int port, String configFilePath, String attestCommandsPath) {
 		System.out.println(">TPM server: initializing...");
 
 		cache = new MyCache();
 		tpmConfig = getConfiguration(configFilePath);
-			
+		attestationCommands = getAttestationCommands(attestCommandsPath);
 		s = establishSecureConnection(port);
 	}
 
 	private TPMServerConfig getConfiguration(String fileName) {
+		System.out.println(">TPM server: retrieving server configuration.");
 		Gson gson = new Gson();
 		JsonReader reader;
 		TPMServerConfig tpmConfig = null;
@@ -103,6 +104,45 @@ public abstract class TPMServer {
 			e.printStackTrace();
 		}
 		return tpmConfig;
+	}
+
+	protected AttestationCommand[] getAttestationCommands(String fileName) {
+		System.out.println(">TPM server: retrieving attestation commands from configuration.");
+		Gson gson = new Gson();
+		JsonReader reader;
+		AttestationCommand[] commands = null;
+		try {
+			reader = new JsonReader(new FileReader(fileName));
+			commands = gson.fromJson(reader, AttestationCommand[].class);
+		} catch (FileNotFoundException e) {
+			System.err.println(">TPM server: commands for TPM not found.");
+			e.printStackTrace();
+		}
+		return commands;
+	}
+
+	public byte[] getSnapshot() {
+		byte [] attestations = null;
+		MessageDigest hash;
+
+		try {
+			hash = MessageDigest.getInstance(tpmConfig.getHashAlg(), tpmConfig.getHashProvider());
+
+			String output;
+
+			for(int i = 0; i < attestationCommands.length; i++) {
+				output = executeShellCommand(attestationCommands[i].getCommand(),
+						attestationCommands[i].getColumns());
+				hash.update(Utils.toByteArray(output));
+			}
+
+			attestations = hash.digest();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return attestations;
 	}
 
 	protected void initiateAttestationProtocol() {
@@ -201,9 +241,6 @@ public abstract class TPMServer {
 			e.printStackTrace();
 		}
 	}
-
-
-	abstract byte[] getSnapshot();
 
 	private void encryptSnapshot() {
 

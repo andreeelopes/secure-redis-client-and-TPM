@@ -74,7 +74,7 @@ public class TPMClient {
 	private static final String VMS_SNAPSHOT_FILE_PATH = "vmsSnapshot";
 	private static final char ATTESTATION_REQUEST_CODE = '0';
 	private static final char ATTESTATION_RESPONSE_CODE = '1';
-	
+
 
 	private BigInteger g512 = new BigInteger(
 			"153d5d6172adb43045b68ae8e1de1070b6137005686d29d3d73a7"
@@ -100,30 +100,31 @@ public class TPMClient {
 			String ipVMSTPM, int portVMSTPM) {
 
 		byte[] snapshotGOSTPM = getSnapshot(ipGOSTPM, portGOSTPM, config.getGosCertEntry());
-		//byte[] snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM, config.getVmsCertEntry());
-		
+		byte[] snapshotVMSTPM = getSnapshot(ipVMSTPM, portVMSTPM, config.getVmsCertEntry());
+
 		//byte[] snapshotGOSTPM = null;
 		//byte[] snapshotVMSTPM = null;
-		
+
 		//Thread GOSTPMThread = new Thread( () -> getSnapshot(ipGOSTPM, portGOSTPM));
 		//Thread VMSTPMThread = new Thread( () -> getSnapshot(ipVMSTPM, portVMSTPM));
-		
-//		GOSTPMThread.start();
-//		VMSTPMThread.start();
-//		
-//		try {
-//			GOSTPMThread.join();
-//			VMSTPMThread.join();
-//		} catch (InterruptedException e) {
-//			e.printStackTrace();
-//		}
 
-		
-		return attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM, GOS_SNAPSHOT_FILE_PATH);// && 
-			//	attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM, VMS_SNAPSHOT_FILE_PATH); 
+		//		GOSTPMThread.start();
+		//		VMSTPMThread.start();
+		//		
+		//		try {
+		//			GOSTPMThread.join();
+		//			VMSTPMThread.join();
+		//		} catch (InterruptedException e) {
+		//			e.printStackTrace();
+		//		}
+
+
+		return attestTPM(snapshotGOSTPM, oldSnapshotGOSTPM, GOS_SNAPSHOT_FILE_PATH) &&
+				attestTPM(snapshotVMSTPM, oldSnapshotVMSTPM, VMS_SNAPSHOT_FILE_PATH); 
 	}
 
 	private TPMClientConfig getConfiguration(String fileName) {
+		System.out.println(">TPM client: retrieving tpm client configuration.");
 		Gson gson = new Gson();
 		JsonReader reader;
 		TPMClientConfig clientConfig = null;
@@ -136,7 +137,7 @@ public class TPMClient {
 		}
 		return clientConfig;
 	}
-	
+
 	private boolean attestTPM(byte[] snapshot, byte[] oldSnapshot, String pathName ) {
 
 
@@ -169,8 +170,7 @@ public class TPMClient {
 
 			requestSnapshotDH();
 			snapshot = receiveSnapshotDH(certName); 
-
-
+			
 			w.close();
 			c.close();
 		} catch (IOException e) {
@@ -223,7 +223,7 @@ public class TPMClient {
 			byte [] signBytes = new byte[r.readInt()];
 			r.read(signBytes);
 			agreedCipherConfig = (CipherSuiteConfig) r.readObject();
-			
+
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			ObjectOutputStream signStream = new ObjectOutputStream(out);
 			signStream.writeInt(nonceS);			
@@ -232,17 +232,17 @@ public class TPMClient {
 			signStream.write(encryptedSnapBytes);
 			signStream.writeObject(agreedCipherConfig);	
 
-			
-//			System.out.println("---------------");
-//			System.out.println();
-//			System.out.println(nonceS);
-//			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
-//			System.out.println(encryptedSnapBytes.length);
-//			System.out.println(Utils.toHex(encryptedSnapBytes));
-//			System.out.println(signBytes.length);
-//			System.out.println(Utils.toHex(signBytes));
-//			System.out.println();
-//			System.out.println("---------------");
+
+			//			System.out.println("---------------");
+			//			System.out.println();
+			//			System.out.println(nonceS);
+			//			System.out.println(Utils.toHex(bPubNumber.getEncoded()));
+			//			System.out.println(encryptedSnapBytes.length);
+			//			System.out.println(Utils.toHex(encryptedSnapBytes));
+			//			System.out.println(signBytes.length);
+			//			System.out.println(Utils.toHex(signBytes));
+			//			System.out.println();
+			//			System.out.println("---------------");
 
 			byte[] msg = out.toByteArray();
 
@@ -270,7 +270,7 @@ public class TPMClient {
 					new byte[] { 0x08, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 ,
 							0x08, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 
 			};
-			
+
 
 			Cipher cipher = Cipher.getInstance(agreedCipherConfig.getSymmAlg(), agreedCipherConfig.getSymmProvider());
 			cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(ivBytes));
@@ -297,9 +297,9 @@ public class TPMClient {
 			KeyStore keyStore = KeyManager.getOrCreateKeyStore(config.getTrustStorePath(), config.getTrustStorePwd());
 			Certificate cert = keyStore.getCertificate(certName);
 			PublicKey publicKey = cert.getPublicKey();
-			
-//			System.out.println("PublicKey (bytes) = " + Utils.toHex(publicKey.getEncoded()));
-			
+
+			//			System.out.println("PublicKey (bytes) = " + Utils.toHex(publicKey.getEncoded()));
+
 			Signature signature = Signature.getInstance(config.getSignatureAlg(), config.getSignatureProvider());
 
 			signature.initVerify(publicKey);

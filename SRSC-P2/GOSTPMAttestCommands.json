@@ -1,0 +1,6 @@
+[
+  {
+    "command": "ls -l /sbin",
+    "columns": null
+  }
+]
