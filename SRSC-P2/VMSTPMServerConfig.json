@@ -1,7 +1,7 @@
 {
-  "keyStorePath": "VMSTPMKeyStore.jks",
+  "keyStorePath": "GOSTPMKeyStore.jks",
   "keyStorePwd": "srscsrsc",
-  "keyPairEntry": "vmskeypair",
+  "keyPairEntry": "gospair",
   "keyPairPwd": "srscsrsc",
   "sslCipherSuites": [
     "TLS_RSA_WITH_AES_256_CBC_SHA256"
@@ -19,5 +19,23 @@
   "hashProvider": "BC",
   "symmAlg": "AES/CBC/PKCS7Padding",
   "symmProvider": "BC",
-  "symmKeySize": 256
+  "symmKeySize": 256,
+  "initializationVector": [
+    8,
+    6,
+    5,
+    4,
+    3,
+    2,
+    1,
+    0,
+    8,
+    6,
+    5,
+    4,
+    3,
+    2,
+    1,
+    0
+  ]
 }

@@ -256,14 +256,15 @@ public abstract class TPMServer {
 			snapStream.writeObject(snapshot);
 			byte[] snapshotBytes = out.toByteArray();
 
-			byte[]	ivBytes = 
-					new byte[] { 0x08, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 ,
-							0x08, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 
-			}; 
+			byte[] ivBytes = tpmConfig.getIV();
 
 
 			Cipher cipher = Cipher.getInstance(tpmConfig.getSymmAlg(), tpmConfig.getSymmProvider());
-			cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(ivBytes));//TODO passar para a configuracao assim fica da responsabilidade do cliente
+			if(ivBytes == null) {
+				cipher.init(Cipher.ENCRYPT_MODE, key);
+			}
+			else
+				cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(ivBytes));
 			encryptedSnapBytes = cipher.doFinal(snapshotBytes);
 
 			System.out.println(">TPM server: snapshot encryption has finished.");

@@ -15,16 +15,17 @@ public class CipherSuiteConfig implements Serializable{
 	private String symmAlg;
 	private String symmProvider;
 	private int symmKeySize;
-
+	private byte[] iv;
 
 	public CipherSuiteConfig(String hashAlg, String hashProvider, String symmAlg, String symmProvider,
-			int symmKeySize) {
+			int symmKeySize, byte[] iv) {
 
 		this.hashAlg = hashAlg;
 		this.hashProvider = hashProvider;
 		this.symmAlg = symmAlg;
 		this.symmProvider = symmProvider;
 		this.symmKeySize = symmKeySize;
+		this.iv = iv;
 	}
 
 	public String toJSON() {
@@ -71,5 +72,12 @@ public class CipherSuiteConfig implements Serializable{
 	}
 	public void setSymmKeySize(int symmKeySize) {
 		this.symmKeySize = symmKeySize;
+	}
+	
+	public byte[] getIV() {
+		return iv;
+	}
+	public void setIV(byte[] iv) {
+		this.iv = iv;
 	}
 }

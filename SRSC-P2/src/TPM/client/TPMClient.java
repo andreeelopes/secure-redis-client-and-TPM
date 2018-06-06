@@ -36,18 +36,14 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
-import javax.rmi.CORBA.Util;
 
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
 
 import TPM.CipherSuiteConfig;
-import TPM.server.TPMServerConfig;
-import utils.CipherConfig;
 import utils.FileHelper;
 import utils.KeyManager;
 import utils.MyCache;
-import utils.Utils;
 
 public class TPMClient {
 
@@ -266,14 +262,16 @@ public class TPMClient {
 		byte[] snapshot = null;
 		try {
 
-			byte[]	ivBytes = 
-					new byte[] { 0x08, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 ,
-							0x08, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 
-			};
-
+			byte[]	ivBytes = agreedCipherConfig.getIV();
 
 			Cipher cipher = Cipher.getInstance(agreedCipherConfig.getSymmAlg(), agreedCipherConfig.getSymmProvider());
-			cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(ivBytes));
+			
+			if(ivBytes == null) {
+				cipher.init(Cipher.DECRYPT_MODE, key);
+			}
+			else {
+				cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(ivBytes));
+			}
 			byte text[] = cipher.doFinal(encryptedSnapBytes);
 
 			ByteArrayInputStream in = new ByteArrayInputStream(text);

@@ -21,15 +21,14 @@ public class Main {
 			port = Integer.parseInt(args[0]);
 			configPath = args[1];
 			attestCommandsPath = args[2];
-	
+
 		}
 
-		//new GOSTPMServer(port, configPath);
-		//new VMSTPMServer(port, configPath);	
+		//new GOSTPMServer(port, configPath, attestCommandsPath);
+		//new VMSTPMServer(port, configPath), attestCommandsPath;	
 
-		new GOSTPMServer(4446, "GOSTPMServerConfig.json", "GOSTPMAttestCommands.json");
+		//new GOSTPMServer(4446, "GOSTPMServerConfig.json", "GOSTPMAttestCommands.json");
 		//new VMSTPMServer(4443, "VMSTPMServerConfig.json", "VMSTPMAttestCommands.json");
-
 
 	}
 
