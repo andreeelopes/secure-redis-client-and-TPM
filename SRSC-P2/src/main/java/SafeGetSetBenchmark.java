@@ -32,16 +32,16 @@ public class SafeGetSetBenchmark {
 			}
 
 			for (int n = 0; n <= TOTAL_OPERATIONS; n++) {
+				
+				jedis.getClientID(Integer.toString(n));
+				//System.out.println(jedis.get(key));
+			}
+			for (int n = 0; n <= TOTAL_OPERATIONS; n++) {
 
 				jedis.removeClient(n);
 				// System.out.println(jedis.get(key));
 			}
 			
-			for (int n = 0; n <= TOTAL_OPERATIONS; n++) {
-				
-				jedis.getClientID(Integer.toString(n));
-				//System.out.println(jedis.get(key));
-			}
 			
 			
 			long elapsed = Calendar.getInstance().getTimeInMillis() - begin;
