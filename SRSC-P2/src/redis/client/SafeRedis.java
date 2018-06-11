@@ -110,11 +110,10 @@ public class SafeRedis {
 
 			byte[] tempbuffer;
 			String checkString;
-
 			for(int i=0;i<hashValues.length;i++) {
 				String[] hashValue=hashValues[i].split(":");
 				Pair p=new Pair(hashValue[0],hashValue[1]);
-
+				
 				tempbuffer=map.get(p.getKey()).getBytes("ISO-8859-1");
 				tempbuffer=mac.doFinal(tempbuffer);
 				checkString=new String(tempbuffer,"ISO-8859-1");
@@ -190,6 +189,7 @@ public class SafeRedis {
 				for(int i=0;i<keysArray.length;i++) {
 					jedis.srem(keysArray[i], keyHash);
 				}
+				jedis.srem("Key" + ":" + new String(hmacValue, "ISO-8859-1"), keyHash);
 				jedis.del(keyHash);
 				return true;
 			}
