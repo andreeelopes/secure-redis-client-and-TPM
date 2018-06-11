@@ -107,11 +107,12 @@ public class SafeRedis {
 	private boolean checkIfisValid(String mainKey, Map<String, String> map) {
 		try {
 			String[] hashValues=mainKey.split(" ");
-
+			
 			byte[] tempbuffer;
 			String checkString;
 			for(int i=0;i<hashValues.length;i++) {
 				String[] hashValue=hashValues[i].split(":");
+				if(hashValue.length!=2)continue;
 				Pair p=new Pair(hashValue[0],hashValue[1]);
 				
 				tempbuffer=map.get(p.getKey()).getBytes("ISO-8859-1");

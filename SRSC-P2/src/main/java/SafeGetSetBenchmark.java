@@ -48,7 +48,7 @@ public class SafeGetSetBenchmark {
 
 		
 
-			System.out.println(((1000 * 2 * TOTAL_OPERATIONS) / elapsed) + " ops/s");	
+			System.out.println(((1000 * 3 * TOTAL_OPERATIONS) / elapsed) + " ops/s");	
 		}
 
 
