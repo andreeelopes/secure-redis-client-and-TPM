@@ -12,8 +12,8 @@ cliente (inteiro), cartão de cidadão do cliente (string), data de emissão (st
 , morada (string), telefone
 (string), número de contribuinte fiscal do cliente (string),*/
 	private SafeRedis redis;
-	public RedisClient() {
-		redis = new SafeRedis();
+	public RedisClient(String ip,int port) {
+		redis = new SafeRedis(ip,port);
 	}
 	public void setClient(int clientnr,String CC,String emissionDate,
 			String address,String phone, String NIF) {

@@ -40,8 +40,8 @@ public class SafeRedis {
 	private IvParameterSpec ivParameterSpec;
 	private Cipher cipher;
 	Signature signature;
-	public SafeRedis() {
-		jedis = new Jedis("172.17.0.2", 6379, 10000, false);
+	public SafeRedis(String ip,int port) {
+		jedis = new Jedis(ip, port, 10000, false);
 		jedis.flushAll();
 		jedis.connect();
 		config = XMLParser.getClientconfig(PATH_TO_CONFIG_FILE);
