@@ -1,4 +1,4 @@
-package main.java;
+package benchmarkSafeRedis;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
