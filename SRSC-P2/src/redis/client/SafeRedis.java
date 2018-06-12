@@ -1,6 +1,8 @@
 package redis.client;
 
 
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.Signature;
@@ -10,9 +12,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
+import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import redis.clients.jedis.Jedis;
 import utils.CipherConfig;
@@ -191,6 +196,7 @@ public class SafeRedis {
 					jedis.srem(keysArray[i], keyHash);
 				}
 				jedis.srem("Key" + ":" + new String(hmacValue, "ISO-8859-1"), keyHash);
+				this.makeThrash(keyHash);
 				jedis.del(keyHash);
 				return true;
 			}
@@ -244,6 +250,28 @@ public class SafeRedis {
 		else
 		{
 			return false;
+		}
+	}
+	public void makeThrash(String mainKey) throws Exception {
+		Map<String,String> values=jedis.hgetAll(mainKey);
+		Set<String>fields=values.keySet();
+		Iterator<String> it=fields.iterator();
+		while(it.hasNext()) {
+			String field=it.next();
+			byte[] valueByteArray = new byte[values.get(field).length()];
+			new Random().nextBytes(valueByteArray);
+			
+			KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+			keyGen.init(256); // for example
+			SecretKey secretKey = keyGen.generateKey();
+			
+			Cipher tempCipher=Cipher.getInstance("AES/CBC/PKCS7Padding");
+			tempCipher.init(cipher.ENCRYPT_MODE, secretKey, ivParameterSpec);
+			byte[] cipherValue = tempCipher.doFinal(valueByteArray);
+
+			String cipherStringValue = new String(cipherValue, "ISO-8859-1");
+
+			jedis.hset(mainKey, field, cipherStringValue);
 		}
 	}
 }
