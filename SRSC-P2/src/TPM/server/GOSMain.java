@@ -3,15 +3,14 @@ package TPM.server;
 import java.io.IOException;
 
 
-public class Main {
+public class GOSMain {
 
 
 
 	public static void main(String[] args) throws IOException {
 
 		int port = -1;
-		String keyStore = null, 
-				configPath = null,
+		String configPath = null,
 				attestCommandsPath = null;
 
 
@@ -24,11 +23,10 @@ public class Main {
 
 		}
 
-		//new GOSTPMServer(port, configPath, attestCommandsPath);
-		//new VMSTPMServer(port, configPath), attestCommandsPath;	
+		new GOSTPMServer(port, configPath, attestCommandsPath);
 
+		//for debug use
 		//new GOSTPMServer(4446, "GOSTPMServerConfig.json", "GOSTPMAttestCommands.json");
-		//new VMSTPMServer(4443, "VMSTPMServerConfig.json", "VMSTPMAttestCommands.json");
 
 	}
 
