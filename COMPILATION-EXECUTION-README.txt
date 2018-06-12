@@ -13,7 +13,7 @@ java -jar GOSTPM.jar <port> <TPMServerConfigPath> <TPMServerAttestationCommandsP
 
 	example:
 
-	java -jar GOSTPM.jar 4446, "GOSTPMServerConfig.json", "GOSTPMAttestCommands.json"
+	java -jar GOSTPM.jar 4446 GOSTPMServerConfig.json GOSTPMAttestCommands.json
 
 
 > How to run VMS TPM server:
@@ -22,7 +22,7 @@ java -jar GOSTPM.jar <port> <TPMServerConfigPath> <TPMServerAttestationCommandsP
 
 	example:
 
-	java -jar VMSTPM.jar 4446, "VMSTPMServerConfig.json", "VMSTPMAttestCommands.json"
+	java -jar VMSTPM.jar 4443 VMSTPMServerConfig.json VMSTPMAttestCommands.json
 
 
 	where: 
