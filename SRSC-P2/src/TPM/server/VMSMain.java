@@ -10,7 +10,7 @@ public class VMSMain {
 
 
 		if(args.length < 3)
-			System.out.println("Usage: <port> <TPMServerConfigPath> <TPMServerAttestationCommandsPath");
+			System.out.println("Usage: <port> <TPMServerConfigPath> <TPMServerAttestationCommandsPath>");
 		else {
 			port = Integer.parseInt(args[0]);
 			configPath = args[1];
