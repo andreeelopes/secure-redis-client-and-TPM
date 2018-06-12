@@ -1,7 +1,7 @@
 {
-  "keyStorePath": "GOSTPMKeyStore.jks",
+  "keyStorePath": "VMSTPMKeyStore.jks",
   "keyStorePwd": "srscsrsc",
-  "keyPairEntry": "gospair",
+  "keyPairEntry": "vmskeypair",
   "keyPairPwd": "srscsrsc",
   "sslCipherSuites": [
     "TLS_RSA_WITH_AES_256_CBC_SHA256"
