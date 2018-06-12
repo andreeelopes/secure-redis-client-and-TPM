@@ -1,3 +1,12 @@
+> How to run SafeRedisBenchmark:
+
+java -jar -Djavax.net.ssl.trustStore=TPMClientTrustStore SafeRedisBenchmark.jar <redisIP> <redisPort> <ipGOSTPM> <portGOSTPM> <ipVMSTPM> <portVMSTPM>
+
+	example:
+	
+	java -jar -Djavax.net.ssl.trustStore=TPMClientTrustStore SafeRedisBenchmark.jar 172.17.0.2 6379 localhost 4446 localhost 4443
+	
+
 > How to run GOS TPM server:
 
 java -jar GOSTPM.jar <port> <TPMServerConfigPath> <TPMServerAttestationCommandsPath>
